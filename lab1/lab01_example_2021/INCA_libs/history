@@ -1,0 +1,7 @@
+//
+// File created by:  xrun
+// Do not modify this file
+
+s1::(14Oct2021:14:33:07):( xrun -compile -l xrun_compile.log -F tb.f -v93 +nowarnDSEM2009 +nowarnDSEMEL +nowarnCGDEFN -xmlibdirname INCA_libs +overwrite -nocopyright )
+s2::(14Oct2021:14:33:07):( xrun -elaborate -l xrun_elaborate.log -F tb.f -v93 +nowarnDSEM2009 +nowarnDSEMEL +nowarnCGDEFN -xmlibdirname INCA_libs +overwrite -nocopyright )
+s3::(14Oct2021:14:33:09):( xrun -F tb.f -v93 +nowarnDSEM2009 +nowarnDSEMEL +nowarnCGDEFN -xmlibdirname INCA_libs +overwrite -nocopyright -l xrun_test_lab01.log )

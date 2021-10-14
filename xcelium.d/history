@@ -2,4 +2,4 @@
 // File created by:  xrun
 // Do not modify this file
 
-s1::(07Oct2021:18:59:30):( xrun +elaborate +sv -f /home/student/rziobrowski/VDIC/.dvt/apple.build )
+s1::(14Oct2021:15:17:47):( xrun +elaborate +sv -f /home/student/rziobrowski/VDIC/.dvt/lab1.build )
