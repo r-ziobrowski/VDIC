@@ -1,0 +1,23 @@
+TOOL:	xrun	19.09-s003: Started on Oct 07, 2021 at 15:17:25 CEST
+xrun
+	-compile
+	-l xrun_compile.log
+	-F tb.f
+		apple_tb.v
+		apple.v
+	-v93
+	+nowarnDSEM2009
+	+nowarnDSEMEL
+	+nowarnCGDEFN
+	-xmlibdirname INCA_libs_gui
+	+access+r
+	+gui
+	+overwrite
+	-nocopyright
+file: ./apple_tb.v
+	module worklib.apple_tb:v
+		errors: 0, warnings: 0
+file: ./apple.v
+	module worklib.apple:v
+		errors: 0, warnings: 0
+TOOL:	xrun	19.09-s003: Exiting on Oct 07, 2021 at 15:17:25 CEST  (total: 00:00:00)

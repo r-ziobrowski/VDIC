@@ -1,0 +1,60 @@
+TOOL:	xrun	19.09-s003: Started on Oct 07, 2021 at 15:19:52 CEST
+xrun
+	-F tb.f
+		apple_tb.v
+		apple.v
+	-v93
+	+nowarnDSEM2009
+	+nowarnDSEMEL
+	+nowarnCGDEFN
+	-xmlibdirname INCA_libs_gui
+	+access+r
+	+gui
+	+overwrite
+	-nocopyright
+	-covtest lab01
+	-l xrun_gui.log
+	-s
+Recompiling... reason: file './apple_tb.v' is newer than expected.
+	expected: Thu Oct  7 15:18:12 2021
+	actual:   Thu Oct  7 15:19:41 2021
+file: ./apple_tb.v
+	module worklib.apple_tb:v
+		errors: 0, warnings: 0
+		Caching library 'worklib' ....... Done
+	Elaborating the design hierarchy:
+	Top level design units:
+		apple_tb
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.apple_tb:v <0x62017c85>
+			streams:   5, words:  2709
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		         Instances  Unique
+		Modules:         2       2
+		Registers:       4       4
+		Scalar wires:    4       -
+		Always blocks:   1       1
+		Initial blocks:  5       5
+	Writing initial simulation snapshot: worklib.apple_tb:v
+xcelium> 
+xcelium> source /cad/XCELIUM1909/tools/xcelium/files/xmsimrc
+xcelium> 
+-------------------------------------
+Relinquished control to SimVision...
+# Restoring simulation environment...
+xcelium> input -quiet .reinvoke.sim
+xcelium> file delete .reinvoke.sim
+xcelium> run
+Simulation complete via $finish(1) at time 200 NS + 0
+./apple_tb.v:36 		$finish();
+xcelium> ^C
+xcelium> exit
+
+coverage setup:
+  workdir  :  ./cov_work
+  scope    :  scope
+  testname :  lab01
+TOOL:	xrun	19.09-s003: Exiting on Oct 07, 2021 at 15:50:38 CEST  (total: 00:30:46)

@@ -1,0 +1,5 @@
+s1(07Oct2021:15:17:25):  xrun -compile -l xrun_compile.log -F tb.f -v93 +nowarnDSEM2009 +nowarnDSEMEL +nowarnCGDEFN -xmlibdirname INCA_libs_gui +access+r +gui +overwrite -nocopyright 
+s2(07Oct2021:15:17:25):  xrun -elaborate -l xrun_elaborate.log -F tb.f -v93 +nowarnDSEM2009 +nowarnDSEMEL +nowarnCGDEFN -xmlibdirname INCA_libs_gui +access+r +gui +overwrite -nocopyright 
+s3(07Oct2021:15:17:26):  xrun -F tb.f -v93 +nowarnDSEM2009 +nowarnDSEMEL +nowarnCGDEFN -xmlibdirname INCA_libs_gui +access+r +gui +overwrite -nocopyright -covtest lab01 -l xrun_gui.log 
+s4(07Oct2021:15:18:21):  xrun -F tb.f -v93 +nowarnDSEM2009 +nowarnDSEMEL +nowarnCGDEFN -xmlibdirname INCA_libs_gui +access+r +gui +overwrite -nocopyright -covtest lab01 -l xrun_gui.log "-s " 
+s5(07Oct2021:15:19:52):  xrun -F tb.f -v93 +nowarnDSEM2009 +nowarnDSEMEL +nowarnCGDEFN -xmlibdirname INCA_libs_gui +access+r +gui +overwrite -nocopyright -covtest lab01 -l xrun_gui.log -s 

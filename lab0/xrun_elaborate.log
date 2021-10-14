@@ -1,0 +1,37 @@
+TOOL:	xrun	19.09-s003: Started on Oct 07, 2021 at 15:17:25 CEST
+xrun
+	-elaborate
+	-l xrun_elaborate.log
+	-F tb.f
+		apple_tb.v
+		apple.v
+	-v93
+	+nowarnDSEM2009
+	+nowarnDSEMEL
+	+nowarnCGDEFN
+	-xmlibdirname INCA_libs_gui
+	+access+r
+	+gui
+	+overwrite
+	-nocopyright
+		Caching library 'worklib' ....... Done
+	Elaborating the design hierarchy:
+	Top level design units:
+		apple_tb
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.apple:v <0x44db1028>
+			streams:   2, words:   299
+		worklib.apple_tb:v <0x1c1e7a10>
+			streams:   2, words:  1341
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		         Instances  Unique
+		Modules:         2       2
+		Registers:       4       4
+		Scalar wires:    4       -
+		Always blocks:   1       1
+		Initial blocks:  2       2
+	Writing initial simulation snapshot: worklib.apple_tb:v
+TOOL:	xrun	19.09-s003: Exiting on Oct 07, 2021 at 15:17:26 CEST  (total: 00:00:01)

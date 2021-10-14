@@ -1,0 +1,37 @@
+xrun: 19.09-s003: (c) Copyright 1995-2019 Cadence Design Systems, Inc.
+TOOL:	xrun	19.09-s003: Started on Oct 07, 2021 at 18:59:30 CEST
+xrun
+	+elaborate
+	+sv
+	-f /home/student/rziobrowski/VDIC/.dvt/apple.build
+		-F lab0/tb.f
+			apple_tb.v
+			apple.v
+file: lab0/apple_tb.v
+	module worklib.apple_tb:v
+		errors: 0, warnings: 0
+file: lab0/apple.v
+	module worklib.apple:v
+		errors: 0, warnings: 0
+		Caching library 'worklib' ....... Done
+	Elaborating the design hierarchy:
+	Top level design units:
+		apple_tb
+xmelab: *W,DSEMEL: This SystemVerilog design will be simulated as per IEEE 1800-2009 SystemVerilog simulation semantics. Use -disable_sem2009 option for turning off SV 2009 simulation semantics.
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.apple:v <0x389e22d2>
+			streams:   0, words:     0
+		worklib.apple_tb:v <0x47d090b1>
+			streams:   1, words:   681
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		         Instances  Unique
+		Modules:         2       2
+		Registers:       4       4
+		Scalar wires:    3       -
+		Always blocks:   1       1
+		Initial blocks:  5       5
+	Writing initial simulation snapshot: worklib.apple_tb:v
+TOOL:	xrun	19.09-s003: Exiting on Oct 07, 2021 at 18:59:30 CEST  (total: 00:00:00)
