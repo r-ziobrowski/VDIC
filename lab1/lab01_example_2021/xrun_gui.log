@@ -29,4 +29,5 @@ xcelium> run
 Test PASSED.
 Simulation complete via $finish(1) at time 4380 NS + 0
 ./tinyalu_tb.sv:145     $finish;
-xcelium> 
+xcelium> xmsim: *W,NCTERM: Simulation received SIGTERM signal from process 7594, user id 4012 (<unknown>).
+TOOL:	xrun	19.09-s003: Exiting on Oct 14, 2021 at 15:46:15 CEST  (total: 01:13:00)

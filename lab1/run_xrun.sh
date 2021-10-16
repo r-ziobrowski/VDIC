@@ -1,8 +1,9 @@
 # tested with XCELIUM 19.09
 
 # Commmand arguments:
-# -g option   - starts xrun simulation with gui, with separate database
-# -q option   - xrun quiet operation, less information on screen
+# -g          - starts xrun simulation with gui, with separate database
+# -q          - xrun quiet operation, less information on screen
+# -d          - define verilog `DEBUG macro
 # -f <file.f> - use file.f instead of the default tb.f 
 # -c          - run imc after simulation to merge the coverage results and
 #               display the statistics
@@ -35,17 +36,20 @@ XCELIUM_CONFIG="/cad/env/cadence_path.XCELIUM1909";
 INCA="INCA_libs"
 GUI=""
 QUIET=""
+DEBUG=""
 RUN_IMC=""
 #>>>
 #------------------------------------------------------------------------------
 # check input script arguments and env#<<<
-while getopts gqh option
+while getopts cdf:gq option
   do case "${option}" in
     g) GUI="+access+r +gui"; INCA="${INCA}_gui";;
     q) QUIET="-q";;
+    d) DEBUG="-define DEBUG";;
     f) FFILE=$OPTARG;;
     c) RUN_IMC=1;;
-    *) echo -e "Valid option are: \n-g (for GUI) \n-q (for quiet run)"; 
+    *) echo -e "Valid option are: \n-g - for GUI \n-q - for quiet run"; 
+       echo -e "-d - set DEBUG verilog macro"
        echo -e "-f <file.f> (default: tb.f)"
        echo -e "-c - run coverage analysis (merge coverage results)"
        exit -1 ;;
@@ -75,6 +79,7 @@ XRUN_ARGS="\
   -F $FFILE \
   -v93 \
   $QUIET \
+  $DEBUG \
   +nowarnDSEM2009 \
   +nowarnDSEMEL \
   +nowarnCGDEFN \
@@ -125,9 +130,13 @@ function xrun_elaborate() { #<<<
 } #>>>
 #------------------------------------------------------------------------------
 function xrun_run_all_tests() { #<<<
+  COV_TEST=""
   if [[ "$GUI" != "" ]] ; then
+      if [[ "$RUN_IMC" != "" ]]; then
+        COV_TEST="-covtest ${TESTS[0]}"
+      fi
       xrun $XRUN_ARGS \
-        -covtest ${TESTS[0]} \
+        $COV_TEST \
         -l xrun_gui.log
 #        +UVM_TESTNAME=${TESTS[0]} \
   else  
@@ -136,9 +145,12 @@ function xrun_run_all_tests() { #<<<
     for TEST in ${TESTS[@]} ; do
       TEST_LIST="$TEST_LIST $TEST"
       xrun_info "# Running test: $TEST. Log saved to xrun_test_$TEST.log"
+      if [[ "$RUN_IMC" != "" ]]; then
+        COV_TEST="-covtest $TEST"
+      fi
       # run the simulation
       xrun $XRUN_ARGS \
-        -covtest $TEST \
+        $COV_TEST \
         -l xrun_test_$TEST.log
 #        +UVM_TESTNAME=$TEST \
       xrun_check_status $? "Test $TEST"

@@ -44,6 +44,6 @@ set assert_reporting_mode 0
 alias . run
 alias quit exit
 database -open -shm -into waves.shm waves -default
-probe -create -database waves top.A top.B top.clk top.done top.op top.op_set top.reset_n top.result top.start top.test_result
+probe -create -database waves top.clk top.rst_n top.sin top.sout
 
-simvision -input /home/student/rziobrowski/VDIC/lab1/lab01_example_2021/.simvision/14474_rziobrowski__autosave.tcl.svcf
+simvision -input /home/student/rziobrowski/VDIC/lab1/.simvision/406618_rziobrowski__autosave.tcl.svcf
