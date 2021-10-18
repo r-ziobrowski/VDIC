@@ -1,4 +1,5 @@
 `timescale 1ns/1ps
+
 `define ERR_DATA_mask 	(6'b100100)
 `define ERR_CRC_mask 	(6'b010010)
 `define ERR_OP_mask 	(6'b001001)
@@ -6,59 +7,66 @@
 
 module top;
 
-	typedef enum bit[2:0] {
-		and_op = 3'b000,
-		or_op  = 3'b001,
-		add_op = 3'b100,
-		sub_op = 3'b101
-	} operation_t;
-	
-	typedef struct {
-		bit [31:0] A;
-		bit [31:0] B;
-		bit [2:0] OP;
-		bit [3:0] CRC;
-		bit [2:0] A_nr_of_bytes;
-		bit [2:0] B_nr_of_bytes;
-	} ALU_input_t;
-	
-	typedef struct {
-		bit [31:0] C;
-		bit [3:0] FLAGS;
-		bit [2:0] CRC;
-	} ALU_output_t;
-	
-	typedef struct {
-		bit [5:0] ERR_FLAGS;
-		bit PARITY;
-	} ALU_ERR_output_t;
-	
-	typedef struct {
-		bit ERR_DATA;
-		bit ERR_CRC;
-		bit ERR_OP;
-		bit ERR_expected;
-	} ERR_FLAGS_expected_t;
+typedef enum bit[1:0] {
+	nop_op = 2'b00,
+	rst_op = 2'b01,
+	def_op = 2'b10
+} op_mode_t;
+
+typedef enum bit[2:0] {
+	and_op = 3'b000,
+	or_op  = 3'b001,
+	add_op = 3'b100,
+	sub_op = 3'b101
+} operation_t;
+
+typedef struct {
+	bit [31:0] A;
+	bit [31:0] B;
+	bit [2:0] OP;
+	bit [3:0] CRC;
+	bit [2:0] A_nr_of_bytes;
+	bit [2:0] B_nr_of_bytes;
+} ALU_input_t;
+
+typedef struct {
+	bit [31:0] C;
+	bit [3:0] FLAGS;
+	bit [2:0] CRC;
+} ALU_output_t;
+
+typedef struct {
+	bit [5:0] ERR_FLAGS;
+	bit PARITY;
+} ALU_ERR_output_t;
+
+typedef struct {
+	bit ERR_DATA;
+	bit ERR_CRC;
+	bit ERR_OP;
+	bit ERR_expected;
+} ERR_FLAGS_expected_t;
 	
 //------------------------------------------------------------------------------
 // DUT instantiation
 //------------------------------------------------------------------------------
 
-	bit clk;
-	bit rst_n;
-	bit sin;
-	wire sout;
-	
-	bit ERROR_out;
-	ALU_input_t ALU_input;
-	ERR_FLAGS_expected_t ERR_FLAGS_expected;
-	ALU_output_t ALU_output;
-	ALU_ERR_output_t ALU_ERR_output;
-	
-	string test_result = "PASSED";
-	
-	
-	mtm_Alu DUT (
+bit clk;
+bit rst_n;
+bit sin;
+wire sout;
+
+bit ERROR_out;
+op_mode_t op_mode;
+ALU_input_t ALU_input;
+ERR_FLAGS_expected_t ERR_FLAGS_expected;
+ALU_output_t ALU_output;
+ALU_ERR_output_t ALU_ERR_output;
+
+string test_result = "PASSED";
+
+
+mtm_Alu DUT (
 		.clk  (clk),    //posedge active clock
 		.rst_n(rst_n),  //synchronous reset active low
 		.sin  (sin),    //serial data input
@@ -68,73 +76,73 @@ module top;
 //------------------------------------------------------------------------------
 // Clock generator
 //------------------------------------------------------------------------------
-	initial begin : clk_gen
-		clk = 0;
-		forever begin : clk_frv
-			#10;
-			clk = ~clk;
-		end
+initial begin : clk_gen
+	clk = 0;
+	forever begin : clk_frv
+		#10;
+		clk = ~clk;
 	end
+end
 
 //------------------------------------------------------------------------------
-// Serial write tasks
+// Serial write
 //------------------------------------------------------------------------------
-	task serial_write(bit [7:0] data_in, bit is_cmd);
-		automatic bit [10:0] serial_data = {1'b0, is_cmd, data_in, 1'b1};
-		foreach(serial_data[i])begin
-			@(negedge clk);
-			sin = serial_data[i];
-		end
-	endtask : serial_write
+task serial_write(bit [7:0] data_in, bit is_cmd);
+	automatic bit [10:0] serial_data = {1'b0, is_cmd, data_in, 1'b1};
+	foreach(serial_data[i])begin
+		@(negedge clk);
+		sin = serial_data[i];
+	end
+endtask : serial_write
 
-	task send_message(ALU_input_t ALU_in);
-		for(int i = ALU_in.B_nr_of_bytes; i > 0; i--)begin
-			serial_write(ALU_in.B[i*8-1 -: 8], 1'b0);
-		end
-		for(int i = ALU_in.A_nr_of_bytes; i > 0; i--)begin
-			serial_write(ALU_in.A[i*8-1 -: 8], 1'b0);
-		end
-		serial_write({1'b0, ALU_in.OP, ALU_in.CRC}, 1'b1);
-	endtask : send_message
+task send_message(ALU_input_t ALU_in);
+	for(int i = ALU_in.B_nr_of_bytes; i > 0; i--)begin
+		serial_write(ALU_in.B[i*8-1 -: 8], 1'b0);
+	end
+	for(int i = ALU_in.A_nr_of_bytes; i > 0; i--)begin
+		serial_write(ALU_in.A[i*8-1 -: 8], 1'b0);
+	end
+	serial_write({1'b0, ALU_in.OP, ALU_in.CRC}, 1'b1);
+endtask : send_message
 	
 //------------------------------------------------------------------------------
-// Serial read tasks
+// Serial read
 //------------------------------------------------------------------------------
-	task serial_read(output bit [7:0] data_out, bit is_cmd);
-		@(negedge sout);
-		for(int i = 0; i < 11; i++)begin
-			@(negedge clk);
-			case(i) inside 
-				1: is_cmd = sout;
-				[2:9]: data_out[(7-(i-2))] = sout;
-			endcase
-		end
-	endtask : serial_read
+task serial_read(output bit [7:0] data_out, bit is_cmd);
+	@(negedge sout);
+	for(int i = 0; i < 11; i++)begin
+		@(negedge clk);
+		case(i) inside 
+			1: is_cmd = sout;
+			[2:9]: data_out[(7-(i-2))] = sout;
+		endcase
+	end
+endtask : serial_read
 
-	task read_message(output ALU_output_t ALU_out, ALU_ERR_output_t ALU_ERR_out, bit is_ERROR);
-		automatic bit [7:0] data_tmp;
-		automatic bit is_cmd = 1'b0;
-		is_ERROR = 1'b0;
-		ALU_out.FLAGS = 4'h0;
-		ALU_ERR_out.ERR_FLAGS = 6'h0;
-		ALU_ERR_out.PARITY = 1'b0;
-		for(int i = $rtoi($ceil($size(ALU_out.C)/8)); i > 0; i--)begin
-			serial_read(data_tmp, is_cmd);
-			if (is_cmd == 1'b1)begin
-				is_ERROR = 1'b1;
-				ALU_ERR_out.ERR_FLAGS = data_tmp[6 -: 6];
-				ALU_ERR_out.PARITY = data_tmp[0];
-				break;
-			end else begin
-				ALU_out.C[i*8-1 -: 8] = data_tmp;
-			end			
-		end
-		if (!is_ERROR) begin
-			serial_read(data_tmp, is_cmd);
-			ALU_out.FLAGS = data_tmp[6:3];
-			ALU_out.CRC = data_tmp[2:0];
-		end
-	endtask : read_message
+task read_message(output ALU_output_t ALU_out, ALU_ERR_output_t ALU_ERR_out, bit is_ERROR);
+	automatic bit [7:0] data_tmp;
+	automatic bit is_cmd = 1'b0;
+	is_ERROR = 1'b0;
+	ALU_out.FLAGS = 4'h0;
+	ALU_ERR_out.ERR_FLAGS = 6'h0;
+	ALU_ERR_out.PARITY = 1'b0;
+	for(int i = $rtoi($ceil($size(ALU_out.C)/8)); i > 0; i--)begin
+		serial_read(data_tmp, is_cmd);
+		if (is_cmd == 1'b1)begin
+			is_ERROR = 1'b1;
+			ALU_ERR_out.ERR_FLAGS = data_tmp[6 -: 6];
+			ALU_ERR_out.PARITY = data_tmp[0];
+			break;
+		end else begin
+			ALU_out.C[i*8-1 -: 8] = data_tmp;
+		end			
+	end
+	if (!is_ERROR) begin
+		serial_read(data_tmp, is_cmd);
+		ALU_out.FLAGS = data_tmp[6:3];
+		ALU_out.CRC = data_tmp[2:0];
+	end
+endtask : read_message
 
 //------------------------------------------------------------------------------
 // CRC generation
@@ -173,6 +181,9 @@ function bit [2:0] CRC_output(bit [36:0] data, bit [2:0] crc);
   	end
 endfunction : CRC_output
 
+//------------------------------------------------------------------------------
+// Data generation
+//------------------------------------------------------------------------------
 function bit [2:0] get_op();
     bit [2:0] op_choice;
     op_choice = $random;
@@ -249,8 +260,18 @@ function void ALU_input_generate();
 	end 
 endfunction : ALU_input_generate
 
+function op_mode_t get_op_mode();
+    bit [1:0] op_mode_choice;
+    op_mode_choice = $random;
+    case (op_mode_choice)
+        2'b00 : return nop_op;
+        2'b01 : return rst_op;
+        2'b10 : return def_op;
+        2'b11 : return def_op;
+    endcase // case (op_mode_choice)
+endfunction
 //------------------------------------------------------------------------------
-// calculate expected result
+// Expected result generation
 //------------------------------------------------------------------------------
 function logic [31:0] get_expected(bit [31:0] A, bit [31:0] B, operation_t op_set);
     bit [31:0] ret;
@@ -274,60 +295,72 @@ endfunction
 //------------------------------------------------------------------------------
 // Tester main
 //------------------------------------------------------------------------------
-	initial begin : tester
+initial begin : tester
 	reset_dut();
-    repeat (1_000_000) begin : tester_main
+    repeat (10_000) begin : tester_main
 		ERR_FLAGS_expected.ERR_expected = 1'b0;
-	    ALU_input_generate();
-	    send_message(ALU_input);
-	    read_message(ALU_output, ALU_ERR_output, ERROR_out);
 	    
-	    assert (ERR_FLAGS_expected.ERR_expected === ERROR_out) else begin
-		    $display("Test FAILED - did not return ERR_FLAGS");
-		    test_result = "FAILED";
-		    continue;
-	    end;
-	    
-	    if (!ERROR_out) begin
-            //------------------------------------------------------------------------------
-            // temporary data check - scoreboard will do the job later
-            //------------------------------------------------------------------------------
-            automatic bit [31:0] expected = get_expected(ALU_input.A, ALU_input.B, operation_t'(ALU_input.OP));
-            assert(ALU_output.C === expected) begin
-                `ifdef DEBUG
-                $display("Test passed for A=%0d B=%0d op_set=%0b", A, B, (operation_t'(ALU_input.OP)));
-                `endif
-            end else begin
-                $display("Test FAILED for A=%0h B=%0h op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
-                $display("Expected: %h  received: %h", expected, ALU_output.C);
-                test_result = "FAILED";
-            end;
-            
-	    end else begin //ERROR_out
-		    if(ERR_FLAGS_expected.ERR_DATA) begin
-			   assert((ALU_ERR_output.ERR_FLAGS & `ERR_DATA_mask) === `ERR_DATA_mask) else begin
-                    $display("Test FAILED - expected ERR_DATA");
-                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
-                    test_result = "FAILED";
-                end;
+	    op_mode = get_op_mode();
+	    case (op_mode) // handle of nop and rst
+            nop_op: begin : case_nop_op
+                @(negedge clk);
+            end
+            rst_op: begin : case_rst_op
+                reset_dut();
+            end
+            default: begin : case_default
+			    ALU_input_generate();
+			    send_message(ALU_input);
+			    read_message(ALU_output, ALU_ERR_output, ERROR_out);
+			    
+			    assert (ERR_FLAGS_expected.ERR_expected === ERROR_out) else begin
+				    $display("Test FAILED - did not return ERR_FLAGS");
+				    test_result = "FAILED";
+				    continue;
+			    end;
+			    
+			    if (!ERROR_out) begin
+		            //------------------------------------------------------------------------------
+		            // temporary data check - scoreboard will do the job later
+		            //------------------------------------------------------------------------------
+		            automatic bit [31:0] expected = get_expected(ALU_input.A, ALU_input.B, operation_t'(ALU_input.OP));
+		            assert(ALU_output.C === expected) begin
+		                `ifdef DEBUG
+		                $display("Test passed for A=%0d B=%0d op_set=%0b", A, B, (operation_t'(ALU_input.OP)));
+		                `endif
+		            end else begin
+		                $display("Test FAILED for A=%0h B=%0h op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
+		                $display("Expected: %h  received: %h", expected, ALU_output.C);
+		                test_result = "FAILED";
+		            end;
+		            
+			    end else begin // ERROR_out
+				    if(ERR_FLAGS_expected.ERR_DATA) begin
+					   assert((ALU_ERR_output.ERR_FLAGS & `ERR_DATA_mask) === `ERR_DATA_mask) else begin
+		                    $display("Test FAILED - expected ERR_DATA");
+		                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+		                    test_result = "FAILED";
+		                end;
+				    end
+				    
+		//		    if(ERR_FLAGS_expected.ERR_CRC) begin
+		//			   assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
+		//                    $display("Test FAILED - expected ERR_CRC");
+		//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+		//                    test_result = "FAILED";
+		//                end;
+		//		    end
+		//		    
+		//		    if(ERR_FLAGS_expected.ERR_OP) begin
+		//		   		assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
+		//                    $display("Test FAILED - expected ERR_OP");
+		//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+		//                    test_result = "FAILED";
+		//                end;
+		//			end
+			    end
 		    end
-		    
-//		    if(ERR_FLAGS_expected.ERR_CRC) begin
-//			   assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
-//                    $display("Test FAILED - expected ERR_CRC");
-//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
-//                    test_result = "FAILED";
-//                end;
-//		    end
-//		    
-//		    if(ERR_FLAGS_expected.ERR_OP) begin
-//		   		assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
-//                    $display("Test FAILED - expected ERR_OP");
-//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
-//                    test_result = "FAILED";
-//                end;
-//			end
-		end
+	    endcase
     end
     $finish;
 end : tester
@@ -337,7 +370,7 @@ end : tester
 //------------------------------------------------------------------------------
 task reset_dut();
 `ifdef DEBUG
-	$display("%0t DEBUG: reset_alu", $time);
+	$display("%0t DEBUG: reset_dut", $time);
 `endif
 	sin = 1'b1;
 	rst_n = 1'b0;
@@ -347,6 +380,7 @@ endtask : reset_dut
 
 //------------------------------------------------------------------------------
 // Temporary. The scoreboard data will be later used.
+//------------------------------------------------------------------------------
 final begin : finish_of_the_test
     $display("Test %s.",test_result);
 end
