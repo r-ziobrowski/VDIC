@@ -4,7 +4,6 @@
 `define ERR_CRC_mask 	(6'b010010)
 `define ERR_OP_mask 	(6'b001001)
 
-
 module top;
 
 typedef enum bit[1:0] {
@@ -56,6 +55,7 @@ bit rst_n;
 bit sin;
 wire sout;
 
+bit chk_flag = 1'b0;
 bit ERROR_out;
 op_mode_t op_mode;
 ALU_input_t ALU_input;
@@ -122,6 +122,7 @@ endtask : serial_read
 task read_message(output ALU_output_t ALU_out, ALU_ERR_output_t ALU_ERR_out, bit is_ERROR);
 	automatic bit [7:0] data_tmp;
 	automatic bit is_cmd = 1'b0;
+	
 	is_ERROR = 1'b0;
 	ALU_out.FLAGS = 4'h0;
 	ALU_ERR_out.ERR_FLAGS = 6'h0;
@@ -297,71 +298,26 @@ endfunction
 //------------------------------------------------------------------------------
 initial begin : tester
 	reset_dut();
-    repeat (10) begin : tester_main
+    repeat (1000) begin : tester_main
+	    wait(chk_flag == 1'b0);
 		ERR_FLAGS_expected.ERR_expected = 1'b0;
-	    
 	    op_mode = get_op_mode();
+	    ALU_input_generate();
 	    case (op_mode) // handle of nop and rst
             nop_op: begin : case_nop_op
                 @(negedge clk);
             end
+            
             rst_op: begin : case_rst_op
                 reset_dut();
             end
+            
             default: begin : case_default
-			    ALU_input_generate();
 			    send_message(ALU_input);
-			    read_message(ALU_output, ALU_ERR_output, ERROR_out);
-			    
-			    assert (ERR_FLAGS_expected.ERR_expected === ERROR_out) else begin
-				    $display("Test FAILED - did not return ERR_FLAGS");
-				    test_result = "FAILED";
-				    continue;
-			    end;
-			    
-			    if (!ERROR_out) begin
-		            //------------------------------------------------------------------------------
-		            // temporary data check - scoreboard will do the job later
-		            //------------------------------------------------------------------------------
-		            automatic bit [31:0] expected = get_expected(ALU_input.A, ALU_input.B, operation_t'(ALU_input.OP));
-		            assert(ALU_output.C === expected) begin
-		                `ifdef DEBUG
-		                $display("Test passed for A=%0d B=%0d op_set=%0b", A, B, (operation_t'(ALU_input.OP)));
-		                `endif
-		            end else begin
-		                $display("Test FAILED for A=%0h B=%0h op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
-		                $display("Expected: %h  received: %h", expected, ALU_output.C);
-		                test_result = "FAILED";
-		            end;
-		            
-			    end else begin // ERROR_out
-				    if(ERR_FLAGS_expected.ERR_DATA) begin
-					   assert((ALU_ERR_output.ERR_FLAGS & `ERR_DATA_mask) === `ERR_DATA_mask) else begin
-		                    $display("Test FAILED - expected ERR_DATA");
-		                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
-		                    test_result = "FAILED";
-		                end;
-				    end
-				    
-		//		    if(ERR_FLAGS_expected.ERR_CRC) begin
-		//			   assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
-		//                    $display("Test FAILED - expected ERR_CRC");
-		//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
-		//                    test_result = "FAILED";
-		//                end;
-		//		    end
-		//		    
-		//		    if(ERR_FLAGS_expected.ERR_OP) begin
-		//		   		assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
-		//                    $display("Test FAILED - expected ERR_OP");
-		//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
-		//                    test_result = "FAILED";
-		//                end;
-		//			end
-			    end
-		    end
+				chk_flag = 1'b1;		    
+            end
 	    endcase
-        if($get_coverage() == 100) break;
+//        if($get_coverage() == 100) break;
     end
     $finish;
 end : tester
@@ -386,4 +342,61 @@ final begin : finish_of_the_test
     $display("Test %s.",test_result);
 end
 //------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Scoreboard
+//------------------------------------------------------------------------------
+initial
+forever begin : scoreboard 
+	@(negedge clk)
+	if (chk_flag) begin
+		read_message(ALU_output, ALU_ERR_output, ERROR_out);
+				    
+	    CHK_ERROR_EXPECTED : assert (ERR_FLAGS_expected.ERR_expected === ERROR_out) else begin
+		    $display("Test FAILED - did not return ERR_FLAGS");
+		    test_result = "FAILED";
+	    end;
+	    
+	    if (!ERROR_out) begin
+	        automatic bit [31:0] expected = get_expected(ALU_input.A, ALU_input.B, operation_t'(ALU_input.OP));
+		    
+	        CHK_RESULT : assert(ALU_output.C === expected) begin
+	            `ifdef DEBUG
+	            $display("Test passed for A=%0d B=%0d op_set=%0b", A, B, (operation_t'(ALU_input.OP)));
+	            `endif
+	        end else begin
+	            $display("Test FAILED for A=%0h B=%0h op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
+	            $display("Expected: %h  received: %h", expected, ALU_output.C);
+	            test_result = "FAILED";
+	        end;
+	        
+	    end else begin // ERROR_out
+		    if(ERR_FLAGS_expected.ERR_DATA) begin
+			   CHK_ERR_DATA : assert((ALU_ERR_output.ERR_FLAGS & `ERR_DATA_mask) === `ERR_DATA_mask) else begin
+	                $display("Test FAILED - expected ERR_DATA");
+	                $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+	                test_result = "FAILED";
+	            end;
+		    end
+		    
+	//		    if(ERR_FLAGS_expected.ERR_CRC) begin
+	//			   assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
+	//                    $display("Test FAILED - expected ERR_CRC");
+	//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+	//                    test_result = "FAILED";
+	//                end;
+	//		    end
+	//		    
+	//		    if(ERR_FLAGS_expected.ERR_OP) begin
+	//		   		assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
+	//                    $display("Test FAILED - expected ERR_OP");
+	//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+	//                    test_result = "FAILED";
+	//                end;
+	//			end
+		end
+	end
+	chk_flag = 1'b0;
+end : scoreboard
 endmodule
