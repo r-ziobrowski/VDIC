@@ -1,0 +1,8 @@
+*.log
+*.history
+*.key
+xcelium.d/
+waves.shm/
+INCA_libs_gui/
+INCA_libs/
+.simvision/

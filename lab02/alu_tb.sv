@@ -61,6 +61,7 @@ op_mode_t op_mode;
 ALU_input_t ALU_input;
 ERR_FLAGS_expected_t ERR_FLAGS_expected;
 ALU_output_t ALU_output;
+ALU_output_t ALU_output_expected;
 ALU_ERR_output_t ALU_ERR_output;
 
 string test_result = "PASSED";
@@ -77,32 +78,45 @@ mtm_Alu DUT (
 // Coverage block
 //------------------------------------------------------------------------------
 
-// Covergroup checking the op codes and theri sequences
+// Covergroup checking the op codes and their sequences
 covergroup op_cov;
 
     option.name = "cg_op_cov";
-
-    coverpoint ALU_input.OP {
+	
+	A_alu_op : coverpoint ALU_input.OP {
 	    
         // #A1 test all operations
-        bins A1_single_cycle[] = {[and_op : sub_op]};
+        bins A1_all_op[] = {[and_op : sub_op]};
+	}
+
+    A_alu_op_comb : coverpoint ALU_input.OP {
+
+        // #A4 run every operation after every operation
+        bins A4_evr_after_evr[] = ([and_op : sub_op] => [and_op : sub_op]);
+
+        // #A5 two operations in row
+        bins A5_twoops[] = ([and_op : sub_op] [* 2]);
+    }
+    
+    A_op_mode : coverpoint op_mode {
+		bins A_rst_2_def = (rst_op => def_op);
+	    
+		bins A_def_2_rst = (def_op => rst_op);
+    }
+    
+    A_rst_op: cross A_alu_op, A_op_mode {
 
         // #A2 test all operations after reset
-//        bins A2_rst_opn[]      = (rst_op => [add_op:mul_op]);
+        bins A2_rst_add      = (binsof(A_alu_op.A1_all_op) intersect {add_op} && binsof(A_op_mode.A_rst_2_def));
+        bins A2_rst_and      = (binsof(A_alu_op.A1_all_op) intersect {and_op} && binsof(A_op_mode.A_rst_2_def));
+        bins A2_rst_or       = (binsof(A_alu_op.A1_all_op) intersect {or_op}  && binsof(A_op_mode.A_rst_2_def));
+        bins A2_rst_sub      = (binsof(A_alu_op.A1_all_op) intersect {sub_op} && binsof(A_op_mode.A_rst_2_def));
 
         // #A3 test reset after all operations
-//        bins A3_opn_rst[]      = ([and_op : sub_op] => rst_op);
-
-        // #A4 multiply after single-cycle operation
-//        bins A4_sngl_mul[]     = ([add_op:xor_op],no_op => mul_op);
-
-        // #A5 single-cycle operation after multiply
-//        bins A5_mul_sngl[]     = (mul_op => [add_op:xor_op], no_op);
-
-        // #A6 two operations in row
-        bins A6_twoops[]       = ([and_op : sub_op] [* 2]);
-
-    // bins manymult = (mul_op [* 3:5]);
+        bins A3_add_rst      = (binsof(A_alu_op.A1_all_op) intersect {add_op} && binsof(A_op_mode.A_def_2_rst));
+        bins A3_and_rst      = (binsof(A_alu_op.A1_all_op) intersect {and_op} && binsof(A_op_mode.A_def_2_rst));
+        bins A3_or_rst       = (binsof(A_alu_op.A1_all_op) intersect {or_op}  && binsof(A_op_mode.A_def_2_rst));
+        bins A3_sub_rst      = (binsof(A_alu_op.A1_all_op) intersect {sub_op} && binsof(A_op_mode.A_def_2_rst));
     }
 
 endgroup
@@ -112,54 +126,49 @@ covergroup zeros_or_ones_on_ops;
 
     option.name = "cg_zeros_or_ones_on_ops";
 
-    all_ops : coverpoint op_set {
-        ignore_bins null_ops = {rst_op, no_op};
+    all_ops : coverpoint ALU_input.OP {
+        bins all_op[] = {[and_op : sub_op]};
     }
 
-    a_leg: coverpoint A {
-        bins zeros = {'h00};
-        bins others= {['h01:'hFE]};
-        bins ones  = {'hFF};
+    a_leg: coverpoint ALU_input.A {
+        bins zeros = {'h0000_0000};
+        bins others= {['h0000_0001:'hFFFF_FFFE]};
+        bins ones  = {'hFFFF_FFFF};
     }
 
-    b_leg: coverpoint B {
-        bins zeros = {'h00};
-        bins others= {['h01:'hFE]};
-        bins ones  = {'hFF};
+    b_leg: coverpoint ALU_input.B {
+        bins zeros = {'h0000_0000};
+        bins others= {['h0000_0001:'hFFFF_FFFE]};
+        bins ones  = {'hFFFF_FFFF};
     }
 
     B_op_00_FF: cross a_leg, b_leg, all_ops {
 
         // #B1 simulate all zero input for all the operations
-
         bins B1_add_00          = binsof (all_ops) intersect {add_op} &&
         (binsof (a_leg.zeros) || binsof (b_leg.zeros));
 
         bins B1_and_00          = binsof (all_ops) intersect {and_op} &&
         (binsof (a_leg.zeros) || binsof (b_leg.zeros));
 
-        bins B1_xor_00          = binsof (all_ops) intersect {xor_op} &&
+        bins B1_or_00         	= binsof (all_ops) intersect {or_op} &&
         (binsof (a_leg.zeros) || binsof (b_leg.zeros));
 
-        bins B1_mul_00          = binsof (all_ops) intersect {mul_op} &&
+        bins B1_sub_00          = binsof (all_ops) intersect {sub_op} &&
         (binsof (a_leg.zeros) || binsof (b_leg.zeros));
 
         // #B2 simulate all one input for all the operations
-
         bins B2_add_FF          = binsof (all_ops) intersect {add_op} &&
         (binsof (a_leg.ones) || binsof (b_leg.ones));
 
         bins B2_and_FF          = binsof (all_ops) intersect {and_op} &&
         (binsof (a_leg.ones) || binsof (b_leg.ones));
 
-        bins B2_xor_FF          = binsof (all_ops) intersect {xor_op} &&
+        bins B2_or_FF          	= binsof (all_ops) intersect {or_op} &&
         (binsof (a_leg.ones) || binsof (b_leg.ones));
 
-        bins B2_mul_FF          = binsof (all_ops) intersect {mul_op} &&
+        bins B2_sub_FF          = binsof (all_ops) intersect {sub_op} &&
         (binsof (a_leg.ones) || binsof (b_leg.ones));
-
-        bins B2_mul_max         = binsof (all_ops) intersect {mul_op} &&
-        (binsof (a_leg.ones) && binsof (b_leg.ones));
 
         ignore_bins others_only =
         binsof(a_leg.others) && binsof(b_leg.others);
@@ -167,17 +176,48 @@ covergroup zeros_or_ones_on_ops;
 
 endgroup
 
+// Covergroup checking error handling
+covergroup err_cov;
+
+    option.name = "cg_err_cov";
+
+    err_op : coverpoint ALU_input.OP {
+	    // #C1 test all invalid operations
+	    bins C1_range[] = {'b000, 'b111};
+        ignore_bins inv_ops[] = {[and_op : sub_op]};
+    }
+    
+    err_crc : coverpoint ERR_FLAGS_expected.ERR_CRC {
+	    // #C2 test invalid CRC
+	    bins C2_err_crc = {1'b1};
+    }
+    
+    err_data_A : coverpoint ALU_input.A_nr_of_bytes {
+	    // #C3 test sending incorrect amount of data
+	    bins C3_inv_range_A[] = {[3'd0 : 3'd3]};
+    }
+        
+    err_data_B : coverpoint ALU_input.B_nr_of_bytes {
+	    // #C3 test sending incorrect amount of data
+	    bins C3_inv_range_B[] = {[3'd0 : 3'd3]};
+    }
+
+endgroup
+
 op_cov                      oc;
 zeros_or_ones_on_ops        c_00_FF;
+err_cov						err_c;
 
 initial begin : coverage
     oc      = new();
     c_00_FF = new();
+	err_c	= new();
     forever begin : sample_cov
         @(posedge clk);
-        if(start || !reset_n) begin
+        if(chk_flag || !rst_n) begin
             oc.sample();
             c_00_FF.sample();
+	        err_c.sample();
         end
     end
 end : coverage
@@ -233,9 +273,14 @@ task read_message(output ALU_output_t ALU_out, ALU_ERR_output_t ALU_ERR_out, bit
 	automatic bit is_cmd = 1'b0;
 	
 	is_ERROR = 1'b0;
-	ALU_out.FLAGS = 4'h0;
+	
 	ALU_ERR_out.ERR_FLAGS = 6'h0;
 	ALU_ERR_out.PARITY = 1'b0;
+	
+	ALU_out.C = 32'h0;
+	ALU_out.CRC = 3'h0;
+	ALU_out.FLAGS = 4'h0;
+	
 	for(int i = $rtoi($ceil($size(ALU_out.C)/8)); i > 0; i--)begin
 		serial_read(data_tmp, is_cmd);
 		if (is_cmd == 1'b1)begin
@@ -298,12 +343,6 @@ function bit [2:0] get_op();
     bit [2:0] op_choice;
     op_choice = 3'($random);
 	
-	if (!(op_choice inside {3'b000, 3'b001, 3'b100, 3'b101})) begin
-		ERR_FLAGS_expected.ERR_OP= 1'b1;
-		ERR_FLAGS_expected.ERR_expected = 1'b1;
-	end else begin
-		ERR_FLAGS_expected.ERR_OP= 1'b0;
-	end
     return op_choice;
 endfunction : get_op
 
@@ -330,11 +369,8 @@ function bit [3:0] get_crc(bit [67:0] data);
     crc_ok = 2'($random);
 	
     if ((crc_ok == 2'b00) && (crc_rand != crc_tmp)) begin
-	    ERR_FLAGS_expected.ERR_CRC = 1'b1;
-		ERR_FLAGS_expected.ERR_expected = 1'b1;
         return crc_rand;
     end else begin
-	    ERR_FLAGS_expected.ERR_CRC = 1'b0;
     	return crc_tmp;
     end
 endfunction : get_crc
@@ -361,13 +397,6 @@ function void ALU_input_generate();
 	ALU_input.CRC = get_crc({ALU_input.B, ALU_input.A, 1'b1, ALU_input.OP});	
 	ALU_input.A_nr_of_bytes = get_data_len();
 	ALU_input.B_nr_of_bytes = get_data_len();
-	
-	if((ALU_input.A_nr_of_bytes != 3'h4) || (ALU_input.B_nr_of_bytes != 3'h4)) begin
-		ERR_FLAGS_expected.ERR_DATA = 1'b1;
-		ERR_FLAGS_expected.ERR_expected = 1'b1;
-	end else begin
-		ERR_FLAGS_expected.ERR_DATA = 1'b0;
-	end 
 endfunction : ALU_input_generate
 
 function op_mode_t get_op_mode();
@@ -380,38 +409,71 @@ function op_mode_t get_op_mode();
         2'b11 : return def_op;
     endcase // case (op_mode_choice)
 endfunction
+
 //------------------------------------------------------------------------------
 // Expected result generation
 //------------------------------------------------------------------------------
-function logic [31:0] get_expected(bit [31:0] A, bit [31:0] B, operation_t op_set);
-    bit [31:0] ret;
+task get_expected(input ALU_input_t ALU_in, output ALU_output_t ALU_out, output ERR_FLAGS_expected_t ERR_FLAGS_exp);
+	automatic bit [3:0] crc_in_tmp = CRC_input({ALU_in.B, ALU_in.A, 1'b1, ALU_in.OP}, 1'b0);
+	
+	ERR_FLAGS_exp.ERR_expected = 1'b0;
+	
+	if((ALU_in.A_nr_of_bytes != 3'h4) || (ALU_in.B_nr_of_bytes != 3'h4)) begin : ERR_DATA_check
+		ERR_FLAGS_exp.ERR_DATA = 1'b1;
+		ERR_FLAGS_exp.ERR_expected = 1'b1;
+	end else begin
+		ERR_FLAGS_exp.ERR_DATA = 1'b0;
+	end 
+	
+	if (!(ALU_in.OP inside {3'b000, 3'b001, 3'b100, 3'b101})) begin : ERR_OP_check
+		ERR_FLAGS_exp.ERR_OP = 1'b1;
+		ERR_FLAGS_exp.ERR_expected = 1'b1;
+	end else begin
+		ERR_FLAGS_exp.ERR_OP= 1'b0;
+	end
+	
+    if (ALU_in.CRC != crc_in_tmp) begin : ERR_CRC_check
+	    ERR_FLAGS_exp.ERR_CRC = 1'b1;
+		ERR_FLAGS_exp.ERR_expected = 1'b1;
+    end else begin
+	    ERR_FLAGS_exp.ERR_CRC = 1'b0;
+    end
+	
+	
     `ifdef DEBUG
-    $display("%0t DEBUG: get_expected(%0d,%0d,%0d)",$time, A, B, op_set);
+    $display("%0t DEBUG: get_expected(%0d,%0d,%0d)",$time, ALU_in.A, ALU_in.B, ALU_in.OP);
     `endif
-    case(op_set)
-        and_op : ret = B & A;
-        add_op : ret = B + A;
-        or_op  : ret = B | A;
-        sub_op : ret = B - A;
-        default: begin
-            $display("%0t INTERNAL ERROR. get_expected: unexpected case argument: %s", $time, op_set);
-            test_result = "FAILED";
-            return -1;
-        end
-    endcase
-    return ret;
-endfunction
+    
+    
+    if(!ERR_FLAGS_exp.ERR_expected) begin : RESULT_calc
+	    case(ALU_in.OP)
+	        and_op : ALU_out.C = ALU_in.B & ALU_in.A;
+	        add_op : ALU_out.C = ALU_in.B + ALU_in.A;
+	        or_op  : ALU_out.C = ALU_in.B | ALU_in.A;
+	        sub_op : ALU_out.C = ALU_in.B - ALU_in.A;
+	        default: begin
+	            $display("%0t INTERNAL ERROR. get_expected: unexpected case argument: %s", $time, ALU_in.OP);
+	            test_result = "FAILED";
+	        end
+	    endcase
+	    
+	    ALU_out.FLAGS = 4'h0;
+	    
+	    if(ALU_out.C < 0)  ALU_out.FLAGS[0] = 1;
+	    if(ALU_out.C == 0) ALU_out.FLAGS[1] = 1;
+	    
+	    ALU_out.CRC = CRC_output({ALU_out.C, 1'b0, ALU_out.FLAGS}, 1'b0);
+    end
+endtask
 
 //------------------------------------------------------------------------------
 // Tester main
 //------------------------------------------------------------------------------
 initial begin : tester
 	reset_dut();
-    repeat (1000) begin : tester_main
+    repeat (100_000) begin : tester_main
 	    wait(chk_flag == 1'b0);
-		ERR_FLAGS_expected.ERR_expected = 1'b0;
 	    op_mode = get_op_mode();
-	    ALU_input_generate();
 	    case (op_mode) // handle of nop and rst
             nop_op: begin : case_nop_op
                 @(negedge clk);
@@ -422,11 +484,12 @@ initial begin : tester
             end
             
             default: begin : case_default
+	    		ALU_input_generate();
 			    send_message(ALU_input);
 				chk_flag = 1'b1;		    
             end
 	    endcase
-//        if($get_coverage() == 100) break;
+        if($get_coverage() == 100) break;
     end
     $finish;
 end : tester
@@ -461,22 +524,21 @@ forever begin : scoreboard
 	@(negedge clk)
 	if (chk_flag) begin
 		read_message(ALU_output, ALU_ERR_output, ERROR_out);
+		get_expected(ALU_input, ALU_output_expected, ERR_FLAGS_expected);
 				    
 	    CHK_ERROR_EXPECTED : assert (ERR_FLAGS_expected.ERR_expected === ERROR_out) else begin
 		    $display("Test FAILED - did not return ERR_FLAGS");
 		    test_result = "FAILED";
 	    end;
 	    
-	    if (!ERROR_out) begin
-	        automatic bit [31:0] expected = get_expected(ALU_input.A, ALU_input.B, operation_t'(ALU_input.OP));
-		    
-	        CHK_RESULT : assert(ALU_output.C === expected) begin
+	    if (!ERROR_out) begin		    
+	        CHK_RESULT : assert(ALU_output.C === ALU_output_expected.C) begin
 	            `ifdef DEBUG
-	            $display("Test passed for A=%0d B=%0d op_set=%0b", A, B, (operation_t'(ALU_input.OP)));
+	            $display("Test passed for A=%0d B=%0d op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
 	            `endif
 	        end else begin
 	            $display("Test FAILED for A=%0h B=%0h op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
-	            $display("Expected: %h  received: %h", expected, ALU_output.C);
+	            $display("Expected: %h  received: %h", ALU_output_expected.C, ALU_output.C);
 	            test_result = "FAILED";
 	        end;
 	        
@@ -490,15 +552,15 @@ forever begin : scoreboard
 		    end
 		    
 		    else if(ERR_FLAGS_expected.ERR_CRC) begin
-			   assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
+			   CHK_ERR_CRC : assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
                     $display("Test FAILED - expected ERR_CRC");
                     $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
                     test_result = "FAILED";
                 end;
 		    end
-		    
+
 		    else if(ERR_FLAGS_expected.ERR_OP) begin
-		   		assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
+		   		CHK_ERR_OP : assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
                     $display("Test FAILED - expected ERR_OP");
                     $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
                     test_result = "FAILED";
