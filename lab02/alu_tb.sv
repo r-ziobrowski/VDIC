@@ -74,6 +74,115 @@ mtm_Alu DUT (
 	);
 
 //------------------------------------------------------------------------------
+// Coverage block
+//------------------------------------------------------------------------------
+
+// Covergroup checking the op codes and theri sequences
+covergroup op_cov;
+
+    option.name = "cg_op_cov";
+
+    coverpoint ALU_input.OP {
+	    
+        // #A1 test all operations
+        bins A1_single_cycle[] = {[and_op : sub_op]};
+
+        // #A2 test all operations after reset
+//        bins A2_rst_opn[]      = (rst_op => [add_op:mul_op]);
+
+        // #A3 test reset after all operations
+//        bins A3_opn_rst[]      = ([and_op : sub_op] => rst_op);
+
+        // #A4 multiply after single-cycle operation
+//        bins A4_sngl_mul[]     = ([add_op:xor_op],no_op => mul_op);
+
+        // #A5 single-cycle operation after multiply
+//        bins A5_mul_sngl[]     = (mul_op => [add_op:xor_op], no_op);
+
+        // #A6 two operations in row
+        bins A6_twoops[]       = ([and_op : sub_op] [* 2]);
+
+    // bins manymult = (mul_op [* 3:5]);
+    }
+
+endgroup
+
+// Covergroup checking for min and max arguments of the ALU
+covergroup zeros_or_ones_on_ops;
+
+    option.name = "cg_zeros_or_ones_on_ops";
+
+    all_ops : coverpoint op_set {
+        ignore_bins null_ops = {rst_op, no_op};
+    }
+
+    a_leg: coverpoint A {
+        bins zeros = {'h00};
+        bins others= {['h01:'hFE]};
+        bins ones  = {'hFF};
+    }
+
+    b_leg: coverpoint B {
+        bins zeros = {'h00};
+        bins others= {['h01:'hFE]};
+        bins ones  = {'hFF};
+    }
+
+    B_op_00_FF: cross a_leg, b_leg, all_ops {
+
+        // #B1 simulate all zero input for all the operations
+
+        bins B1_add_00          = binsof (all_ops) intersect {add_op} &&
+        (binsof (a_leg.zeros) || binsof (b_leg.zeros));
+
+        bins B1_and_00          = binsof (all_ops) intersect {and_op} &&
+        (binsof (a_leg.zeros) || binsof (b_leg.zeros));
+
+        bins B1_xor_00          = binsof (all_ops) intersect {xor_op} &&
+        (binsof (a_leg.zeros) || binsof (b_leg.zeros));
+
+        bins B1_mul_00          = binsof (all_ops) intersect {mul_op} &&
+        (binsof (a_leg.zeros) || binsof (b_leg.zeros));
+
+        // #B2 simulate all one input for all the operations
+
+        bins B2_add_FF          = binsof (all_ops) intersect {add_op} &&
+        (binsof (a_leg.ones) || binsof (b_leg.ones));
+
+        bins B2_and_FF          = binsof (all_ops) intersect {and_op} &&
+        (binsof (a_leg.ones) || binsof (b_leg.ones));
+
+        bins B2_xor_FF          = binsof (all_ops) intersect {xor_op} &&
+        (binsof (a_leg.ones) || binsof (b_leg.ones));
+
+        bins B2_mul_FF          = binsof (all_ops) intersect {mul_op} &&
+        (binsof (a_leg.ones) || binsof (b_leg.ones));
+
+        bins B2_mul_max         = binsof (all_ops) intersect {mul_op} &&
+        (binsof (a_leg.ones) && binsof (b_leg.ones));
+
+        ignore_bins others_only =
+        binsof(a_leg.others) && binsof(b_leg.others);
+    }
+
+endgroup
+
+op_cov                      oc;
+zeros_or_ones_on_ops        c_00_FF;
+
+initial begin : coverage
+    oc      = new();
+    c_00_FF = new();
+    forever begin : sample_cov
+        @(posedge clk);
+        if(start || !reset_n) begin
+            oc.sample();
+            c_00_FF.sample();
+        end
+    end
+end : coverage
+
+//------------------------------------------------------------------------------
 // Clock generator
 //------------------------------------------------------------------------------
 initial begin : clk_gen
@@ -380,21 +489,21 @@ forever begin : scoreboard
 	            end;
 		    end
 		    
-	//		    if(ERR_FLAGS_expected.ERR_CRC) begin
-	//			   assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
-	//                    $display("Test FAILED - expected ERR_CRC");
-	//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
-	//                    test_result = "FAILED";
-	//                end;
-	//		    end
-	//		    
-	//		    if(ERR_FLAGS_expected.ERR_OP) begin
-	//		   		assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
-	//                    $display("Test FAILED - expected ERR_OP");
-	//                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
-	//                    test_result = "FAILED";
-	//                end;
-	//			end
+		    else if(ERR_FLAGS_expected.ERR_CRC) begin
+			   assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
+                    $display("Test FAILED - expected ERR_CRC");
+                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+                    test_result = "FAILED";
+                end;
+		    end
+		    
+		    else if(ERR_FLAGS_expected.ERR_OP) begin
+		   		assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
+                    $display("Test FAILED - expected ERR_OP");
+                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+                    test_result = "FAILED";
+                end;
+			end
 		end
 	end
 	chk_flag = 1'b0;
