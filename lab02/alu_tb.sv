@@ -425,27 +425,22 @@ task get_expected(input ALU_input_t ALU_in, output ALU_output_t ALU_out, output 
 	automatic bit overflow;
 	
 	ERR_FLAGS_exp.ERR_expected = 1'b0;
+	ERR_FLAGS_exp.ERR_DATA = 1'b0;
+	ERR_FLAGS_exp.ERR_OP = 1'b0;
+	ERR_FLAGS_exp.ERR_CRC = 1'b0;
 	
 	if((ALU_in.A_nr_of_bytes != 3'h4) || (ALU_in.B_nr_of_bytes != 3'h4)) begin : ERR_DATA_check
 		ERR_FLAGS_exp.ERR_DATA = 1'b1;
 		ERR_FLAGS_exp.ERR_expected = 1'b1;
-	end else begin
-		ERR_FLAGS_exp.ERR_DATA = 1'b0;
 	end 
-	
-	if (!(ALU_in.OP inside {3'b000, 3'b001, 3'b100, 3'b101})) begin : ERR_OP_check
-		ERR_FLAGS_exp.ERR_OP = 1'b1;
-		ERR_FLAGS_exp.ERR_expected = 1'b1;
-	end else begin
-		ERR_FLAGS_exp.ERR_OP= 1'b0;
-	end
-	
-    if (ALU_in.CRC != crc_in_tmp) begin : ERR_CRC_check
+	else if (ALU_in.CRC != crc_in_tmp) begin : ERR_CRC_check
 	    ERR_FLAGS_exp.ERR_CRC = 1'b1;
 		ERR_FLAGS_exp.ERR_expected = 1'b1;
-    end else begin
-	    ERR_FLAGS_exp.ERR_CRC = 1'b0;
     end
+	else if (!(ALU_in.OP inside {3'b000, 3'b001, 3'b100, 3'b101})) begin : ERR_OP_check
+		ERR_FLAGS_exp.ERR_OP = 1'b1;
+		ERR_FLAGS_exp.ERR_expected = 1'b1;
+	end 
     
     ALU_ERR_out.ERR_FLAGS = {	ERR_FLAGS_exp.ERR_DATA, 
 	    						ERR_FLAGS_exp.ERR_CRC, 
@@ -455,7 +450,6 @@ task get_expected(input ALU_input_t ALU_in, output ALU_output_t ALU_out, output 
 	    						ERR_FLAGS_exp.ERR_OP};
     
     ALU_ERR_out.PARITY = ^{1'b1, ALU_ERR_out.ERR_FLAGS};
-	
 	
     `ifdef DEBUG
     $display("%0t DEBUG: get_expected(%0d,%0d,%0d)",$time, ALU_in.A, ALU_in.B, ALU_in.OP);
@@ -537,14 +531,27 @@ task reset_dut();
 	rst_n = 1'b1;
 endtask : reset_dut
 
-//------------------------------------------------------------------------------
-// Temporary. The scoreboard data will be later used.
-//------------------------------------------------------------------------------
 final begin : finish_of_the_test
-    $display("Test %s.",test_result);
+	
+	if(test_result == "PASSED")begin
+		$display("\n####################################################\n");
+		$display("            #     ################       _   _           ");
+		$display("           #      #              #       *   *           ");
+		$display("      #   #       #    PASSED    #         |             ");
+		$display("       # #        #              #       \\___/          ");
+		$display("        #         ################                       ");
+		$display("\n####################################################\n");
+	end else begin
+		$display("\n####################################################\n");
+		$display("      #   #       ################       _   _           ");
+		$display("       # #        #              #       *   *           ");
+		$display("        #         #    FAILED    #        ___             ");
+		$display("       # #        #              #       /   \\          ");
+		$display("      #   #       ################                       ");
+		$display("\n####################################################\n");
+	end
+	
 end
-//------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 // Scoreboard
@@ -596,7 +603,7 @@ forever begin : scoreboard
 		    if(ERR_FLAGS_expected.ERR_DATA) begin
 			   CHK_ERR_DATA : assert((ALU_ERR_output.ERR_FLAGS & `ERR_DATA_mask) === `ERR_DATA_mask) else begin
 	                $display("Test FAILED - expected ERR_DATA");
-	                $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+	                $display("Received ERR_FLAGS: %b", ALU_ERR_output.ERR_FLAGS);
 	                test_result = "FAILED";
 	            end;
 		    end
@@ -604,7 +611,7 @@ forever begin : scoreboard
 		    else if(ERR_FLAGS_expected.ERR_CRC) begin
 			   CHK_ERR_CRC : assert((ALU_ERR_output.ERR_FLAGS & `ERR_CRC_mask) === `ERR_CRC_mask) else begin
                     $display("Test FAILED - expected ERR_CRC");
-                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+                    $display("Received ERR_FLAGS: %b", ALU_ERR_output.ERR_FLAGS);
                     test_result = "FAILED";
                 end;
 		    end
@@ -612,10 +619,16 @@ forever begin : scoreboard
 		    else if(ERR_FLAGS_expected.ERR_OP) begin
 		   		CHK_ERR_OP : assert((ALU_ERR_output.ERR_FLAGS & `ERR_OP_mask) === `ERR_OP_mask) else begin
                     $display("Test FAILED - expected ERR_OP");
-                    $display("Received ERR_FLAGS %b", ALU_ERR_output.ERR_FLAGS);
+                    $display("Received ERR_FLAGS: %b", ALU_ERR_output.ERR_FLAGS);
                     test_result = "FAILED";
                 end;
-			end
+		    end
+		    
+		    CHK_ERR_PARITY : assert(ALU_ERR_output.PARITY === ALU_ERR_output_expected.PARITY) else begin
+                $display("Test FAILED - invalid parity bit");
+                $display("Received parity: %b", ALU_ERR_output.PARITY);
+                test_result = "FAILED";
+            end;
 		end
 	end
 	chk_flag = 1'b0;
