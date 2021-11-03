@@ -15,8 +15,12 @@ typedef enum bit[1:0] {
 typedef enum bit[2:0] {
 	and_op = 3'b000,
 	or_op  = 3'b001,
+	bad1_op= 3'b010,
+	bad2_op= 3'b011,
 	add_op = 3'b100,
-	sub_op = 3'b101
+	sub_op = 3'b101,
+	bad3_op= 3'b110,
+	bad4_op= 3'b111
 } operation_t;
 
 typedef struct {
@@ -63,6 +67,7 @@ ERR_FLAGS_expected_t ERR_FLAGS_expected;
 ALU_output_t ALU_output;
 ALU_output_t ALU_output_expected;
 ALU_ERR_output_t ALU_ERR_output;
+ALU_ERR_output_t ALU_ERR_output_expected;
 
 string test_result = "PASSED";
 
@@ -86,16 +91,16 @@ covergroup op_cov;
 	A_alu_op : coverpoint ALU_input.OP {
 	    
         // #A1 test all operations
-        bins A1_all_op[] = {[and_op : sub_op]};
+        bins A1_all_op[] = {and_op, or_op, add_op, sub_op}; //TODO check this and fix others if works
 	}
 
     A_alu_op_comb : coverpoint ALU_input.OP {
 
         // #A4 run every operation after every operation
-        bins A4_evr_after_evr[] = ([and_op : sub_op] => [and_op : sub_op]);
+        bins A4_evr_after_evr[] = (and_op, or_op, add_op, sub_op => and_op, or_op, add_op, sub_op);
 
         // #A5 two operations in row
-        bins A5_twoops[] = ([and_op : sub_op] [* 2]);
+        bins A5_twoops[] = (and_op, or_op, add_op, sub_op [* 2]);
     }
     
     A_op_mode : coverpoint op_mode {
@@ -127,7 +132,7 @@ covergroup zeros_or_ones_on_ops;
     option.name = "cg_zeros_or_ones_on_ops";
 
     all_ops : coverpoint ALU_input.OP {
-        bins all_op[] = {[and_op : sub_op]};
+        bins all_op[] = {and_op, or_op, add_op, sub_op};
     }
 
     a_leg: coverpoint ALU_input.A {
@@ -184,7 +189,7 @@ covergroup err_cov;
     err_op : coverpoint ALU_input.OP {
 	    // #C1 test all invalid operations
 	    bins C1_range[] = {'b000, 'b111};
-        ignore_bins inv_ops[] = {[and_op : sub_op]};
+        ignore_bins inv_ops[] = {and_op, or_op, add_op, sub_op};
     }
     
     err_crc : coverpoint ERR_FLAGS_expected.ERR_CRC {
@@ -413,8 +418,11 @@ endfunction
 //------------------------------------------------------------------------------
 // Expected result generation
 //------------------------------------------------------------------------------
-task get_expected(input ALU_input_t ALU_in, output ALU_output_t ALU_out, output ERR_FLAGS_expected_t ERR_FLAGS_exp);
+task get_expected(input ALU_input_t ALU_in, output ALU_output_t ALU_out, output ERR_FLAGS_expected_t ERR_FLAGS_exp, output ALU_ERR_output_t ALU_ERR_out);
 	automatic bit [3:0] crc_in_tmp = CRC_input({ALU_in.B, ALU_in.A, 1'b1, ALU_in.OP}, 1'b0);
+	automatic bit [32:0] C_tmp_carry;
+	automatic bit signed [31:0] C_tmp;
+	automatic bit overflow;
 	
 	ERR_FLAGS_exp.ERR_expected = 1'b0;
 	
@@ -438,6 +446,15 @@ task get_expected(input ALU_input_t ALU_in, output ALU_output_t ALU_out, output 
     end else begin
 	    ERR_FLAGS_exp.ERR_CRC = 1'b0;
     end
+    
+    ALU_ERR_out.ERR_FLAGS = {	ERR_FLAGS_exp.ERR_DATA, 
+	    						ERR_FLAGS_exp.ERR_CRC, 
+	    						ERR_FLAGS_exp.ERR_OP, 
+	    						ERR_FLAGS_exp.ERR_DATA, 
+	    						ERR_FLAGS_exp.ERR_CRC, 
+	    						ERR_FLAGS_exp.ERR_OP};
+    
+    ALU_ERR_out.PARITY = ^{1'b1, ALU_ERR_out.ERR_FLAGS};
 	
 	
     `ifdef DEBUG
@@ -447,20 +464,33 @@ task get_expected(input ALU_input_t ALU_in, output ALU_output_t ALU_out, output 
     
     if(!ERR_FLAGS_exp.ERR_expected) begin : RESULT_calc
 	    case(ALU_in.OP)
-	        and_op : ALU_out.C = ALU_in.B & ALU_in.A;
-	        add_op : ALU_out.C = ALU_in.B + ALU_in.A;
-	        or_op  : ALU_out.C = ALU_in.B | ALU_in.A;
-	        sub_op : ALU_out.C = ALU_in.B - ALU_in.A;
+	        and_op : C_tmp = ALU_in.B & ALU_in.A;
+	        or_op  : C_tmp = ALU_in.B | ALU_in.A;
+	        add_op : begin
+	        	C_tmp = ALU_in.B + ALU_in.A;
+		        C_tmp_carry = ALU_in.B + ALU_in.A;
+		        overflow = ~(ALU_in.B[31] ^ ALU_in.A[31]) & (ALU_in.B[31] ^ C_tmp[31]);
+        	end
+	        sub_op : begin
+	        	C_tmp = ALU_in.B - ALU_in.A;
+		        C_tmp_carry = ALU_in.B - ALU_in.A;
+		        overflow = (ALU_in.B[31] ^ ALU_in.A[31]) & (ALU_in.B[31] ^ C_tmp[31]);
+        	end
 	        default: begin
 	            $display("%0t INTERNAL ERROR. get_expected: unexpected case argument: %s", $time, ALU_in.OP);
 	            test_result = "FAILED";
 	        end
 	    endcase
 	    
+	    ALU_out.C = C_tmp;
+	    
 	    ALU_out.FLAGS = 4'h0;
 	    
-	    if(ALU_out.C < 0)  ALU_out.FLAGS[0] = 1;
-	    if(ALU_out.C == 0) ALU_out.FLAGS[1] = 1;
+	    if(C_tmp < 0)  				ALU_out.FLAGS[0] = 1;
+	    if(C_tmp == 0) 				ALU_out.FLAGS[1] = 1;
+	    if(overflow) 				ALU_out.FLAGS[2] = 1;
+	    if(C_tmp_carry[32] == 1'b1) ALU_out.FLAGS[3] = 1;
+	    
 	    
 	    ALU_out.CRC = CRC_output({ALU_out.C, 1'b0, ALU_out.FLAGS}, 1'b0);
     end
@@ -524,7 +554,7 @@ forever begin : scoreboard
 	@(negedge clk)
 	if (chk_flag) begin
 		read_message(ALU_output, ALU_ERR_output, ERROR_out);
-		get_expected(ALU_input, ALU_output_expected, ERR_FLAGS_expected);
+		get_expected(ALU_input, ALU_output_expected, ERR_FLAGS_expected, ALU_ERR_output_expected);
 				    
 	    CHK_ERROR_EXPECTED : assert (ERR_FLAGS_expected.ERR_expected === ERROR_out) else begin
 		    $display("Test FAILED - did not return ERR_FLAGS");
@@ -539,6 +569,26 @@ forever begin : scoreboard
 	        end else begin
 	            $display("Test FAILED for A=%0h B=%0h op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
 	            $display("Expected: %h  received: %h", ALU_output_expected.C, ALU_output.C);
+	            test_result = "FAILED";
+	        end;
+	        
+	        CHK_FLAGS : assert(ALU_output.FLAGS === ALU_output_expected.FLAGS) begin
+	            `ifdef DEBUG
+	            $display("Test passed for A=%0d B=%0d op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
+	            `endif
+	        end else begin
+	            $display("Test FAILED for A=%0h B=%0h op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
+	            $display("Expected flags: %4b  received: %4b", ALU_output_expected.FLAGS, ALU_output.FLAGS);
+	            test_result = "FAILED";
+	        end;
+	        
+	        CHK_CRC : assert(ALU_output.CRC === ALU_output_expected.CRC) begin
+	            `ifdef DEBUG
+	            $display("Test passed for A=%0d B=%0d op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
+	            `endif
+	        end else begin
+	            $display("Test FAILED for A=%0h B=%0h op_set=%0b", ALU_input.A, ALU_input.B, (operation_t'(ALU_input.OP)));
+	            $display("Expected CRC: %3b  received: %3b", ALU_output_expected.CRC, ALU_output.CRC);
 	            test_result = "FAILED";
 	        end;
 	        
