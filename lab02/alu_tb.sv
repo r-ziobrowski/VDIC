@@ -407,7 +407,7 @@ endfunction : ALU_input_generate
 function op_mode_t get_op_mode();
     bit [1:0] op_mode_choice;
     op_mode_choice = 2'($random);
-    case (op_mode_choice)
+    unique case (op_mode_choice)
         2'b00 : return nop_op;
         2'b01 : return rst_op;
         2'b10 : return def_op;
@@ -532,7 +532,6 @@ task reset_dut();
 endtask : reset_dut
 
 final begin : finish_of_the_test
-	
 	if(test_result == "PASSED")begin
 		$display("\n####################################################\n");
 		$display("            #     ################       _   _           ");
@@ -550,7 +549,6 @@ final begin : finish_of_the_test
 		$display("      #   #       ################                       ");
 		$display("\n####################################################\n");
 	end
-	
 end
 
 //------------------------------------------------------------------------------
