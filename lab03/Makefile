@@ -3,19 +3,19 @@ all:
 	@echo "  run  run_debug  run_quiet  run_gui  run_cov clean"
 
 run:
-	./run_xrun.sh
+	./run_alu.sh
 
 run_debug:
-	./run_xrun.sh -d
+	./run_alu.sh -d
 
 run_quiet:
-	./run_xrun.sh -q
+	./run_alu.sh -q
 
 run_gui:
-	./run_xrun.sh -gd
+	./run_alu.sh -gd
 
 run_cov:
-	./run_xrun.sh -c
+	./run_alu.sh -c
 
 clean: 
 	rm -f *.log
