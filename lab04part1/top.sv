@@ -19,29 +19,6 @@ initial begin
 		status = $fscanf(file,"%s %g %g\n",shape_type, w, h);
 			
 		shape_h = shape_factory::make_shape(shape_type, w, h);
-		
-		case(shape_type)
-			"rectangle" : begin
-				cast_ok = $cast(rectangle_h, shape_h);
-				if(!cast_ok) $fatal(1, "Failed to cast shape_h to rectangle_h");
-				shape_reporter#(rectangle)::add_shape(rectangle_h);
-			end
-			
-			"triangle" : begin
-				cast_ok = $cast(triangle_h, shape_h);
-				if(!cast_ok) $fatal(1, "Failed to cast shape_h to triangle_h");
-				shape_reporter#(triangle)::add_shape(triangle_h);
-			end
-			
-			"square" : begin
-				cast_ok = $cast(square_h, shape_h);
-				if(!cast_ok) $fatal(1, "Failed to cast shape_h to square_h");
-				shape_reporter#(square)::add_shape(square_h);
-			end
-			
-			default : $fatal(1, {"No such shape: ", shape_type});
-			
-		endcase	
 	end
 
 	shape_reporter#(rectangle)::report_shapes();
