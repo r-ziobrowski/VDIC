@@ -11,6 +11,7 @@
 !lab04
 !lab04_example_2021
 !lab04part1
+!lab04part2
 !.dvt
 !.dvt/*
 
@@ -21,6 +22,7 @@
 !**/*.v
 !**/*.vp
 !**/*.sh
+!**/*.svh
 !**/*.vhd
 !**/*.txt
 !**/*.build
