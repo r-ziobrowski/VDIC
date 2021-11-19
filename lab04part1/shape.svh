@@ -1,4 +1,4 @@
-class shape;
+virtual class shape;
 	real width_1;
 	real width_2;
 	real height;
@@ -6,10 +6,8 @@ class shape;
 	function new();
 	endfunction
 	
-	function real get_area();
-	endfunction
+	pure virtual function real get_area();
 	
-	function void print();
-	endfunction
+	pure virtual function void print();
 	
 endclass
