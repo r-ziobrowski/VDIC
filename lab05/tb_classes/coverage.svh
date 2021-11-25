@@ -1,127 +1,172 @@
-/*
- Copyright 2013 Ray Salemi
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- */
 class coverage extends uvm_component;
 
     `uvm_component_utils(coverage)
 
-    virtual tinyalu_bfm bfm;
+    virtual alu_bfm bfm;
 
-    byte unsigned A;
-    byte unsigned B;
-    operation_t op_set;
+	protected bit [31:0] A;
+	protected bit [31:0] B;
+	protected bit [2:0] OP;
+	protected bit [1:0] op_mode;
+	protected bit [2:0] A_nr_of_bytes;
+	protected bit [2:0] B_nr_of_bytes;
+	protected bit ERR_CRC;
 
-    covergroup op_cov;
+	// Covergroup checking the op codes and their sequences
+	covergroup op_cov;
 
-        option.name = "op_cov";
+		option.name = "cg_op_cov";
 
-        coverpoint op_set {
-            bins single_cycle[] = {[add_op : xor_op], rst_op,no_op};
-            bins multi_cycle    = {mul_op};
+		A_alu_op : coverpoint OP {
 
-            bins opn_rst[]      = ([add_op:mul_op] => rst_op);
-            bins rst_opn[]      = (rst_op => [add_op:mul_op]);
+			// #A1 test all operations
+			bins A1_all_op[] = {and_op, or_op, add_op, sub_op}; //TODO check this and fix others if works
+		}
 
-            bins sngl_mul[]     = ([add_op:xor_op],no_op => mul_op);
-            bins mul_sngl[]     = (mul_op => [add_op:xor_op], no_op);
+		A_alu_op_comb : coverpoint OP {
 
-            bins twoops[]       = ([add_op:mul_op] [* 2]);
-            bins manymult       = (mul_op [* 3:5]);
-        }
+			// #A4 run every operation after every operation
+			bins A4_evr_after_evr[] = (and_op, or_op, add_op, sub_op => and_op, or_op, add_op, sub_op);
 
-    endgroup
+			// #A5 two operations in row
+			bins A5_twoops[] = (and_op, or_op, add_op, sub_op [* 2]);
+		}
 
+		A_op_mode : coverpoint op_mode {
+			bins A_rst_2_def = (rst_op => def_op);
 
-    covergroup zeros_or_ones_on_ops;
+			bins A_def_2_rst = (def_op => rst_op);
+		}
 
-        option.name = "zeros_or_ones_on_ops";
+		A_rst_op: cross A_alu_op, A_op_mode {
 
-        all_ops : coverpoint op_set {
-            ignore_bins null_ops = {rst_op, no_op};}
+			// #A2 test all operations after reset
+			bins A2_rst_add      = (binsof(A_alu_op.A1_all_op) intersect {add_op} && binsof(A_op_mode.A_rst_2_def));
+			bins A2_rst_and      = (binsof(A_alu_op.A1_all_op) intersect {and_op} && binsof(A_op_mode.A_rst_2_def));
+			bins A2_rst_or       = (binsof(A_alu_op.A1_all_op) intersect {or_op}  && binsof(A_op_mode.A_rst_2_def));
+			bins A2_rst_sub      = (binsof(A_alu_op.A1_all_op) intersect {sub_op} && binsof(A_op_mode.A_rst_2_def));
 
-        a_leg: coverpoint A {
-            bins zeros = {'h00};
-            bins others= {['h01:'hFE]};
-            bins ones  = {'hFF};
-        }
+			// #A3 test reset after all operations
+			bins A3_add_rst      = (binsof(A_alu_op.A1_all_op) intersect {add_op} && binsof(A_op_mode.A_def_2_rst));
+			bins A3_and_rst      = (binsof(A_alu_op.A1_all_op) intersect {and_op} && binsof(A_op_mode.A_def_2_rst));
+			bins A3_or_rst       = (binsof(A_alu_op.A1_all_op) intersect {or_op}  && binsof(A_op_mode.A_def_2_rst));
+			bins A3_sub_rst      = (binsof(A_alu_op.A1_all_op) intersect {sub_op} && binsof(A_op_mode.A_def_2_rst));
+		}
 
-        b_leg: coverpoint B {
-            bins zeros = {'h00};
-            bins others= {['h01:'hFE]};
-            bins ones  = {'hFF};
-        }
+	endgroup
 
-        op_00_FF: cross a_leg, b_leg, all_ops {
-            bins add_00             = binsof (all_ops) intersect {add_op} &&
-            (binsof (a_leg.zeros) || binsof (b_leg.zeros));
+	// Covergroup checking for min and max arguments of the ALU
+	covergroup zeros_or_ones_on_ops;
 
-            bins add_FF             = binsof (all_ops) intersect {add_op} &&
-            (binsof (a_leg.ones) || binsof (b_leg.ones));
+		option.name = "cg_zeros_or_ones_on_ops";
 
-            bins and_00             = binsof (all_ops) intersect {and_op} &&
-            (binsof (a_leg.zeros) || binsof (b_leg.zeros));
+		all_ops : coverpoint OP {
+			bins all_op[] = {and_op, or_op, add_op, sub_op};
+		}
 
-            bins and_FF             = binsof (all_ops) intersect {and_op} &&
-            (binsof (a_leg.ones) || binsof (b_leg.ones));
+		a_leg: coverpoint A {
+			bins zeros = {'h0000_0000};
+			bins others= {['h0000_0001:'hFFFF_FFFE]};
+			bins ones  = {'hFFFF_FFFF};
+		}
 
-            bins xor_00             = binsof (all_ops) intersect {xor_op} &&
-            (binsof (a_leg.zeros) || binsof (b_leg.zeros));
+		b_leg: coverpoint B {
+			bins zeros = {'h0000_0000};
+			bins others= {['h0000_0001:'hFFFF_FFFE]};
+			bins ones  = {'hFFFF_FFFF};
+		}
 
-            bins xor_FF             = binsof (all_ops) intersect {xor_op} &&
-            (binsof (a_leg.ones) || binsof (b_leg.ones));
+		B_op_00_FF: cross a_leg, b_leg, all_ops {
 
-            bins mul_00             = binsof (all_ops) intersect {mul_op} &&
-            (binsof (a_leg.zeros) || binsof (b_leg.zeros));
+			// #B1 simulate all zero input for all the operations
+			bins B1_add_00          = binsof (all_ops) intersect {add_op} &&
+			(binsof (a_leg.zeros) || binsof (b_leg.zeros));
 
-            bins mul_FF             = binsof (all_ops) intersect {mul_op} &&
-            (binsof (a_leg.ones) || binsof (b_leg.ones));
+			bins B1_and_00          = binsof (all_ops) intersect {and_op} &&
+			(binsof (a_leg.zeros) || binsof (b_leg.zeros));
 
-            bins mul_max            = binsof (all_ops) intersect {mul_op} &&
-            (binsof (a_leg.ones) && binsof (b_leg.ones));
+			bins B1_or_00           = binsof (all_ops) intersect {or_op} &&
+			(binsof (a_leg.zeros) || binsof (b_leg.zeros));
 
-            ignore_bins others_only =
-            binsof(a_leg.others) && binsof(b_leg.others);
-        }
+			bins B1_sub_00          = binsof (all_ops) intersect {sub_op} &&
+			(binsof (a_leg.zeros) || binsof (b_leg.zeros));
 
-    endgroup
+			// #B2 simulate all one input for all the operations
+			bins B2_add_FF          = binsof (all_ops) intersect {add_op} &&
+			(binsof (a_leg.ones) || binsof (b_leg.ones));
 
+			bins B2_and_FF          = binsof (all_ops) intersect {and_op} &&
+			(binsof (a_leg.ones) || binsof (b_leg.ones));
+
+			bins B2_or_FF           = binsof (all_ops) intersect {or_op} &&
+			(binsof (a_leg.ones) || binsof (b_leg.ones));
+
+			bins B2_sub_FF          = binsof (all_ops) intersect {sub_op} &&
+			(binsof (a_leg.ones) || binsof (b_leg.ones));
+
+			ignore_bins others_only =
+			binsof(a_leg.others) && binsof(b_leg.others);
+		}
+
+	endgroup
+
+	// Covergroup checking error handling
+	covergroup err_cov;
+
+		option.name = "cg_err_cov";
+
+		err_op : coverpoint OP {
+			// #C1 test all invalid operations
+			bins C1_range[] = {'b000, 'b111};
+			ignore_bins inv_ops[] = {and_op, or_op, add_op, sub_op};
+		}
+
+		err_crc : coverpoint ERR_CRC {
+			// #C2 test invalid CRC
+			bins C2_err_crc = {1'b1};
+		}
+
+		err_data_A : coverpoint A_nr_of_bytes {
+			// #C3 test sending incorrect amount of data
+			bins C3_inv_range_A[] = {[3'd0 : 3'd3]};
+		}
+
+		err_data_B : coverpoint B_nr_of_bytes {
+			// #C3 test sending incorrect amount of data
+			bins C3_inv_range_B[] = {[3'd0 : 3'd3]};
+		}
+
+	endgroup
 
     function new (string name, uvm_component parent);
         super.new(name, parent);
-        op_cov               = new();
-        zeros_or_ones_on_ops = new();
+		op_cov = new();
+		zeros_or_ones_on_ops = new();
+		err_cov = new();
     endfunction : new
 
-
     function void build_phase(uvm_phase phase);
-        if(!uvm_config_db #(virtual tinyalu_bfm)::get(null, "*","bfm", bfm))
+        if(!uvm_config_db #(virtual alu_bfm)::get(null, "*","bfm", bfm))
             $fatal(1,"Failed to get BFM");
     endfunction : build_phase
 
-
     task run_phase(uvm_phase phase);
-        forever begin : sampling_block
-            @(negedge bfm.clk);
-            A      = bfm.A;
-            B      = bfm.B;
-            op_set = bfm.op_set;
-            op_cov.sample();
-            zeros_or_ones_on_ops.sample();
-        end : sampling_block
+		forever begin : sample_cov
+			@(posedge bfm.clk);
+			if(bfm.chk_flag || !bfm.rst_n) begin
+				A               = bfm.ALU_input.A;
+				B               = bfm.ALU_input.B;
+				OP              = bfm.ALU_input.OP;
+				op_mode         = bfm.op_mode;
+				A_nr_of_bytes   = bfm.ALU_input.A_nr_of_bytes;
+				B_nr_of_bytes   = bfm.ALU_input.A_nr_of_bytes;
+				ERR_CRC         = bfm.ERR_CRC;
+				op_cov.sample();
+				zeros_or_ones_on_ops.sample();
+				err_cov.sample();
+			end
+		end
     endtask : run_phase
-
 
 endclass : coverage
 

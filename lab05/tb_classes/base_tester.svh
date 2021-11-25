@@ -1,66 +1,57 @@
-/*
- Copyright 2013 Ray Salemi
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- */
-//`ifdef QUESTA
-//virtual class base_tester extends uvm_component;
-//`else
-//`ifdef INCA
-// irun requires abstract class when using virtual functions
-// note: irun warns about the virtual class instantiation, this will be an
-// error in future releases.
 virtual class base_tester extends uvm_component;
-//`else
-//class base_tester extends uvm_component;
-//`endif
-//`endif
 
     `uvm_component_utils(base_tester)
 
-    virtual tinyalu_bfm bfm;
+    virtual alu_bfm bfm;
 
     function new (string name, uvm_component parent);
         super.new(name, parent);
     endfunction : new
 
     function void build_phase(uvm_phase phase);
-        if(!uvm_config_db #(virtual tinyalu_bfm)::get(null, "*","bfm", bfm))
+        if(!uvm_config_db #(virtual alu_bfm)::get(null, "*","bfm", bfm))
             $fatal(1,"Failed to get BFM");
     endfunction : build_phase
 
-    pure virtual function operation_t get_op();
+	pure virtual protected function bit [2:0] get_op();
 
-    pure virtual function byte get_data();
+	pure virtual protected function bit [31:0] get_data();
+
+	pure virtual protected function bit [3:0] get_crc(bit [67:0] data);
+
+	pure virtual protected function bit [2:0] get_data_len();
+
+	pure virtual protected function void ALU_input_generate();
+
+	pure virtual protected function op_mode_t get_op_mode();
 
     task run_phase(uvm_phase phase);
-        byte unsigned iA;
-        byte unsigned iB;
-        operation_t op_set;
+        ALU_input_t i_ALU;
         shortint result;
 
         phase.raise_objection(this);
 
-        bfm.reset_alu();
+        bfm.reset_dut();
 
-        repeat (1000) begin : random_loop
-            op_set = get_op();
-            iA     = get_data();
-            iB     = get_data();
-            bfm.send_op(iA, iB, op_set, result);
-        end : random_loop
+		repeat (100_000) begin : tester_main
+			wait(bfm.chk_flag == 1'b0);
+			bfm.op_mode = get_op_mode();
+			case (bfm.op_mode) // handle of nop and rst
+				nop_op: begin : case_nop_op
+					@(negedge bfm.clk);
+				end
 
-//      #500;
+				rst_op: begin : case_rst_op
+					bfm.reset_dut();
+				end
+
+				default: begin : case_default
+            		ALU_input_generate();
+					bfm.send_message(bfm.ALU_input);
+					bfm.chk_flag = 1'b1;
+				end
+			endcase
+		end
 
         phase.drop_objection(this);
 

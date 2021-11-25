@@ -1,18 +1,3 @@
-/*
- Copyright 2013 Ray Salemi
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- */
 class random_tester extends base_tester;
     
     `uvm_component_utils (random_tester)
@@ -21,31 +6,77 @@ class random_tester extends base_tester;
         super.new(name, parent);
     endfunction : new
 
-    function byte get_data();
-        bit [1:0] zero_ones;
-        zero_ones = $random;
-        if (zero_ones == 2'b00)
-            return 8'h00;
-        else if (zero_ones == 2'b11)
-            return 8'hFF;
-        else
-            return $random;
-    endfunction : get_data
+	//------------------------------------------------------------------------------
+	// Data generation
+	//------------------------------------------------------------------------------
+	protected function bit [2:0] get_op();
+		bit [2:0] op_choice;
+		op_choice = 3'($random);
 
-    function operation_t get_op();
-        bit [2:0] op_choice;
-        op_choice = $random;
-        case (op_choice)
-            3'b000 : return no_op;
-            3'b001 : return add_op;
-            3'b010 : return and_op;
-            3'b011 : return xor_op;
-            3'b100 : return mul_op;
-            3'b101 : return no_op;
-            3'b110 : return rst_op;
-            3'b111 : return rst_op;
-        endcase // case (op_choice)
-    endfunction : get_op
+		return op_choice;
+	endfunction : get_op
+
+	protected function bit [31:0] get_data();
+		bit [31:0] data_tmp;
+
+		automatic int status = std::randomize(data_tmp) with {
+			data_tmp dist {32'h0 := 1, [32'h1 : 32'hFFFF_FFFE] :/ 2, 32'hFFFF_FFFF := 1};
+		};
+
+		assert (status) else begin
+			$display("Randomization in get_data() failed");
+		end
+
+		return data_tmp;
+	endfunction : get_data
+
+	protected function bit [3:0] get_crc(bit [67:0] data);
+		bit [1:0] crc_ok;
+		automatic bit [3:0] crc_rand = 4'($random);
+		automatic bit [3:0] crc_tmp = CRC_input(data, 1'b0);
+
+		crc_ok = 2'($random);
+
+		if ((crc_ok == 2'b00) && (crc_rand != crc_tmp)) begin
+			return crc_rand;
+		end else begin
+			return crc_tmp;
+		end
+	endfunction : get_crc
+
+	protected function bit [2:0] get_data_len();
+		bit [2:0] data_tmp;
+
+		automatic int status = std::randomize(data_tmp) with {
+			data_tmp dist {[3'h0 : 3'h3] :/ 25, 3'h4 := 75};
+		};
+
+		assert (status) else begin
+			$display("Randomization in get_data_len() failed");
+		end
+
+		return data_tmp;
+	endfunction : get_data_len
+
+	protected function void ALU_input_generate();
+		bfm.ALU_input.A = get_data();
+		bfm.ALU_input.B = get_data();
+		bfm.ALU_input.OP = get_op();
+		bfm.ALU_input.CRC = get_crc({bfm.ALU_input.B, bfm.ALU_input.A, 1'b1, bfm.ALU_input.OP});
+		bfm.ALU_input.A_nr_of_bytes = get_data_len();
+		bfm.ALU_input.B_nr_of_bytes = get_data_len();
+	endfunction : ALU_input_generate
+
+	protected function op_mode_t get_op_mode();
+		bit [1:0] op_mode_choice;
+		op_mode_choice = 2'($random);
+		unique case (op_mode_choice)
+			2'b00 : return nop_op;
+			2'b01 : return rst_op;
+			2'b10 : return def_op;
+			2'b11 : return def_op;
+		endcase // case (op_mode_choice)
+	endfunction
 
 endclass : random_tester
 
