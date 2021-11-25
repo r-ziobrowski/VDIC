@@ -2,13 +2,13 @@ class coverage;
 
 	virtual alu_bfm bfm;
 
-	bit [31:0] A;
-	bit [31:0] B;
-	bit [2:0] OP;
-	bit [1:0] op_mode;
-	bit [2:0] A_nr_of_bytes;
-	bit [2:0] B_nr_of_bytes;
-	bit ERR_CRC;
+	protected bit [31:0] A;
+	protected bit [31:0] B;
+	protected bit [2:0] OP;
+	protected bit [1:0] op_mode;
+	protected bit [2:0] A_nr_of_bytes;
+	protected bit [2:0] B_nr_of_bytes;
+	protected bit ERR_CRC;
 
 	// Covergroup checking the op codes and their sequences
 	covergroup op_cov;

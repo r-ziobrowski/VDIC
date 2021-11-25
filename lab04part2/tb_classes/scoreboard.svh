@@ -2,14 +2,14 @@ class scoreboard;
 
 	virtual alu_bfm bfm;
 
-	string test_result = "PASSED";
+	protected string test_result = "PASSED";
 
-	bit ERROR_out;
-	ERR_FLAGS_expected_t ERR_FLAGS_expected;
-	ALU_output_t ALU_output;
-	ALU_output_t ALU_output_expected;
-	ALU_ERR_output_t ALU_ERR_output;
-	ALU_ERR_output_t ALU_ERR_output_expected;
+	protected bit ERROR_out;
+	protected ERR_FLAGS_expected_t ERR_FLAGS_expected;
+	protected ALU_output_t ALU_output;
+	protected ALU_output_t ALU_output_expected;
+	protected ALU_ERR_output_t ALU_ERR_output;
+	protected ALU_ERR_output_t ALU_ERR_output_expected;
 
 	function new (virtual alu_bfm b);
 		bfm = b;
