@@ -1,4 +1,4 @@
 # Automatically identify and compile all the source files in the project directory.
 # DO NOT explicitly list files/directories in 'dvt_auto_init' sections. Use 'dvt_init' sections instead.
--F test/alu_tb.f
+-F test/tb.f
 -v93
