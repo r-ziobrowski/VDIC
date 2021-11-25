@@ -5,7 +5,7 @@ class square extends rectangle;
 	endfunction
 	
 	function void print();
-		$display($sformatf("Area of square (w: %g): %g", width_1, get_area()));
+		$display($sformatf("Area of square (w: %g): %g", width, get_area()));
 	endfunction
 	
 endclass

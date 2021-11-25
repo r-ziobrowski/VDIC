@@ -1,15 +1,15 @@
 class rectangle extends shape;
 	function new(real w, real l);
-		width_1 = w;
-		width_2 = l;
+		width = w;
+		height = l;
 	endfunction
 	
 	function real get_area();
-		return width_1*width_2;
+		return width*height;
 	endfunction
 	
 	function void print();
-		$display($sformatf("Area of rectangle (w: %g, l: %g): %g", width_1, width_2, get_area()));
+		$display($sformatf("Area of rectangle (w: %g, l: %g): %g", width, height, get_area()));
 	endfunction
 	
 endclass
