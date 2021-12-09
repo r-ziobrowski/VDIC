@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 interface alu_bfm;
 	import alu_pkg::*;
 
@@ -132,6 +131,10 @@ initial begin
 	            ALU_in_command.OP 				= ALU_input.OP;
 				ALU_in_command.CRC 				= ALU_input.CRC;
 		    	ALU_in_command.op_mode			= ALU_input.op_mode;
+		    	ALU_in_command.ERR_CRC			= ALU_input.ERR_CRC;
+		    	ALU_in_command.ERR_DATA			= ALU_input.ERR_DATA;
+		    	ALU_in_command.ERR_expected		= ALU_input.ERR_expected;
+		    	ALU_in_command.ERR_OP			= ALU_input.ERR_OP;
 		        
 	            command_monitor_h.write_to_monitor(ALU_in_command);
 	            in_command = (ALU_in_command.op_mode != nop_op);

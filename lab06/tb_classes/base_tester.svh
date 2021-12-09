@@ -1,6 +1,6 @@
 virtual class base_tester extends uvm_component;
 
-    `uvm_component_utils(base_tester)
+//    `uvm_component_utils(base_tester)
     
     uvm_put_port #(ALU_input_t) command_port;
 

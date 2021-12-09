@@ -9,7 +9,7 @@ class random_test extends uvm_test;
 
         // set the factory to produce a random_tester whenever it would produce
         // a base_tester
-        base_tester::type_id::set_type_override(random_tester::get_type());
+//        base_tester::type_id::set_type_override(random_tester::get_type());
 
     endfunction : build_phase
 

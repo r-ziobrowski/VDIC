@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 package alu_pkg;
    import uvm_pkg::*;
 	`include "uvm_macros.svh"
@@ -31,6 +32,10 @@ package alu_pkg;
 		bit [2:0] A_nr_of_bytes;
 		bit [2:0] B_nr_of_bytes;
 		op_mode_t op_mode;
+		bit ERR_DATA;
+		bit ERR_CRC;
+		bit ERR_OP;
+		bit ERR_expected;
 	} ALU_input_t;
 	
 	typedef struct packed{
@@ -41,13 +46,6 @@ package alu_pkg;
 		bit [5:0] ERR_FLAGS;
 		bit PARITY;
 	} ALU_output_t;
-	
-	typedef struct packed{
-		bit ERR_DATA;
-		bit ERR_CRC;
-		bit ERR_OP;
-		bit ERR_expected;
-	} ERR_FLAGS_expected_t;
 	
 		// polynomial: x^3 + x^1 + 1
 	function bit [2:0] CRC_output(bit [36:0] data, bit [2:0] crc);

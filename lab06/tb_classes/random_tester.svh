@@ -65,8 +65,11 @@ class random_tester extends base_tester;
 	endfunction
 
 	protected function ALU_input_t ALU_input_generate();
+		bit [3:0] crc_in_tmp;
 		ALU_input_t ALU_in;
+		
 		ALU_in.op_mode = get_op_mode();
+		
 		if(ALU_in.op_mode == def_op) begin
 			ALU_in.A = get_data();
 			ALU_in.B = get_data();
@@ -82,6 +85,26 @@ class random_tester extends base_tester;
 			ALU_in.CRC = ALU_prev.CRC;
 			ALU_in.A_nr_of_bytes = ALU_prev.A_nr_of_bytes;
 			ALU_in.B_nr_of_bytes = ALU_prev.B_nr_of_bytes;
+		end
+		
+		crc_in_tmp = CRC_input({ALU_in.B, ALU_in.A, 1'b1, ALU_in.OP}, 1'b0);
+		
+		ALU_in.ERR_expected = 1'b0;
+		ALU_in.ERR_DATA = 1'b0;
+		ALU_in.ERR_OP = 1'b0;
+		ALU_in.ERR_CRC = 1'b0;
+
+		if((ALU_in.A_nr_of_bytes != 3'h4) || (ALU_in.B_nr_of_bytes != 3'h4)) begin : ERR_DATA_check
+			ALU_in.ERR_DATA = 1'b1;
+			ALU_in.ERR_expected = 1'b1;
+		end
+		else if (ALU_in.CRC != crc_in_tmp) begin : ERR_CRC_check
+			ALU_in.ERR_CRC = 1'b1;
+			ALU_in.ERR_expected = 1'b1;
+		end
+		else if (!(ALU_in.OP inside {3'b000, 3'b001, 3'b100, 3'b101})) begin : ERR_OP_check
+			ALU_in.ERR_OP = 1'b1;
+			ALU_in.ERR_expected = 1'b1;
 		end
 		
 		return ALU_in;
