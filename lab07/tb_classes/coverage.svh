@@ -1,6 +1,6 @@
 class coverage extends uvm_subscriber #(random_command);
 
-    `uvm_component_utils(coverage)
+	`uvm_component_utils(coverage)
 
 	protected bit [31:0] A;
 	protected bit [31:0] B;
@@ -136,25 +136,25 @@ class coverage extends uvm_subscriber #(random_command);
 
 	endgroup
 
-    function new (string name, uvm_component parent);
-        super.new(name, parent);
-		op_cov 					= new();
-		zeros_or_ones_on_ops 	= new();
-		err_cov 				= new();
-    endfunction : new
+	function new (string name, uvm_component parent);
+		super.new(name, parent);
+		op_cov                  = new();
+		zeros_or_ones_on_ops    = new();
+		err_cov                 = new();
+	endfunction : new
 
-    function void write(random_command t);
-	    A               = t.A;
+	function void write(random_command t);
+		A               = t.A;
 		B               = t.B;
 		OP              = t.OP;
 		op_mode         = t.op_mode;
 		A_nr_of_bytes   = t.A_nr_of_bytes;
 		B_nr_of_bytes   = t.A_nr_of_bytes;
-	    ERR_CRC 		= (t.CRC != CRC_input({t.B, t.A, 1'b1, t.OP}, 1'b0));
+		ERR_CRC         = (t.CRC != CRC_input({t.B, t.A, 1'b1, t.OP}, 1'b0));
 		op_cov.sample();
 		zeros_or_ones_on_ops.sample();
 		err_cov.sample();
-    endfunction
+	endfunction
 
 endclass : coverage
 

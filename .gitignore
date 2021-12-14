@@ -11,3 +11,5 @@ cov_work/
 OK
 .project
 .reinvoke.sim
+testing/
+.gitignore~

@@ -2,7 +2,7 @@ module top;
 	import uvm_pkg::*;
 	`include "uvm_macros.svh"
 	import alu_pkg::*;
-	
+
 	alu_bfm bfm();
 
 	mtm_Alu DUT (

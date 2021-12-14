@@ -1,5 +1,7 @@
 interface alu_bfm;
 	import alu_pkg::*;
+	import uvm_pkg::*;
+	`include "uvm_macros.svh"
 
 	bit clk;
 	bit rst_n;
@@ -22,9 +24,7 @@ interface alu_bfm;
 	end
 
 	task reset_dut();
-	`ifdef DEBUG
-		$display("%0t DEBUG: reset_dut", $time);
-	`endif
+		`uvm_info ("ALU BFM", "reset_dut", UVM_HIGH)
 		sin = 1'b1;
 		rst_n = 1'b0;
 		@(negedge clk);
@@ -96,7 +96,7 @@ interface alu_bfm;
 			ALU_out.CRC = data_tmp[2:0];
 		end
 	endtask : read_message
-	
+
 	task send_op(input ALU_input_t ALU_in);
 		ALU_input = ALU_in;
 		case(ALU_in.op_mode)
@@ -117,42 +117,42 @@ interface alu_bfm;
 		@(negedge clk);
 	endtask
 
-initial begin
-    static bit in_command = 0;
-	
-	forever begin : op_monitor
-		@(posedge clk);
-	    if (rcv_flag) begin : sent_and_received
-	        if (!in_command) begin : new_command
-	            command_monitor_h.write_to_monitor(ALU_input);
-	            in_command = (ALU_input.op_mode != nop_op);
-	        end : new_command
-	    end : sent_and_received
-	    else begin
-	        in_command = 0;
-	    end
-	end : op_monitor
-end
+	initial begin
+		static bit in_command = 0;
 
-initial begin : rst_monitor
-	forever begin
-		@(negedge rst_n)
-	    ALU_input.op_mode = rst_op;
-	    if (command_monitor_h != null) //guard against VCS time 0 negedge
-	    begin
-	        command_monitor_h.write_to_monitor(ALU_input);
-	    end
-    end
-end : rst_monitor
+		forever begin : op_monitor
+			@(posedge clk);
+			if (rcv_flag) begin : sent_and_received
+				if (!in_command) begin : new_command
+					command_monitor_h.write_to_monitor(ALU_input);
+					in_command = (ALU_input.op_mode != nop_op);
+				end : new_command
+			end : sent_and_received
+			else begin
+				in_command = 0;
+			end
+		end : op_monitor
+	end
 
-initial begin : result_monitor_thread
-    forever begin
-        @(posedge clk) ;
-        if (rcv_flag) begin
-            result_monitor_h.write_to_monitor(ALU_output);
-        	rcv_flag = 1'b0;
-        end
-    end
-end : result_monitor_thread
+	initial begin : rst_monitor
+		forever begin
+			@(negedge rst_n)
+				ALU_input.op_mode = rst_op;
+			if (command_monitor_h != null) //guard against VCS time 0 negedge
+			begin
+				command_monitor_h.write_to_monitor(ALU_input);
+			end
+		end
+	end : rst_monitor
+
+	initial begin : result_monitor_thread
+		forever begin
+			@(posedge clk) ;
+			if (rcv_flag) begin
+				result_monitor_h.write_to_monitor(ALU_output);
+				rcv_flag = 1'b0;
+			end
+		end
+	end : result_monitor_thread
 
 endinterface : alu_bfm
