@@ -10,19 +10,25 @@ class random_command extends uvm_transaction;
 	rand op_mode_t op_mode;
 
 	constraint data_len {
-		A_nr_of_bytes dist {[3'h0 : 3'h3] := 25, 3'h4 := 75};
-		B_nr_of_bytes dist {[3'h0 : 3'h3] := 25, 3'h4 := 75};
+		A_nr_of_bytes dist {[3'h0 : 3'h3] :/ 25, 3'h4 := 75};
+		B_nr_of_bytes dist {[3'h0 : 3'h3] :/ 25, 3'h4 := 75};
 	}
 
 	constraint crc_val {
-		CRC dist {[4'h0 : 4'hF] := 25, CRC_input({B, A, 1'b1, OP}, 1'b0) := 75};
+		CRC dist {[4'h0 : 4'hF] :/ 25, CRC_input({B, A, 1'b1, OP}, 1'b0) := 75};
 	}
 
 	function new (string name = "");
 		super.new(name);
 	endfunction : new
+	
+    extern function void do_copy(uvm_object rhs);
+    extern function bit do_compare(uvm_object rhs, uvm_comparer comparer);
+    extern function string convert2string();
+	
+endclass : random_command
 
-	function void do_copy(uvm_object rhs);
+	function void random_command::do_copy(uvm_object rhs);
 		random_command copied_transaction_h;
 
 		if(rhs == null)
@@ -43,7 +49,7 @@ class random_command extends uvm_transaction;
 
 	endfunction : do_copy
 
-	function bit do_compare(uvm_object rhs, uvm_comparer comparer);
+	function bit random_command::do_compare(uvm_object rhs, uvm_comparer comparer);
 
 		random_command compared_transaction_h;
 		bit same;
@@ -67,13 +73,12 @@ class random_command extends uvm_transaction;
 	endfunction : do_compare
 
 
-	function string convert2string();
+	function string random_command::convert2string();
 		string s;
 		s = $sformatf("A: %8h B: %8h OP: %h CRC: %h A_nr_of_bytes: %h B_nr_of_bytes: %h op_mode: %s", A, B, OP, CRC, A_nr_of_bytes, B_nr_of_bytes, op_mode.name());
 		return s;
 	endfunction : convert2string
 
 
-endclass : random_command
 
 
