@@ -106,15 +106,33 @@ package alu_pkg;
 		end
 	endfunction : CRC_input
 
+`include "sequence_item.svh"
+`include "minmax_sequence_item.svh"
+
+// to be converted into sequence items
+`include "result_transaction.svh"
+
 //------------------------------------------------------------------------------
-// testbench classes
+// sequencer
 //------------------------------------------------------------------------------
 
-`include "random_command.svh"
-`include "minmax_command.svh"
-`include "result_transaction.svh"
+//`include "sequencer.svh"
+
+// we can use typedef instead of the sequencer class
+    typedef uvm_sequencer #(sequence_item) sequencer;
+
+//------------------------------------------------------------------------------
+// sequences
+//------------------------------------------------------------------------------
+
+`include "random_sequence.svh"
+`include "minmax_sequence.svh"
+
+//------------------------------------------------------------------------------
+// testbench components (no agent here)
+//------------------------------------------------------------------------------
+
 `include "coverage.svh"
-`include "tester.svh"
 `include "scoreboard.svh"
 `include "driver.svh"
 `include "command_monitor.svh"
@@ -122,9 +140,10 @@ package alu_pkg;
 `include "env.svh"
 
 //------------------------------------------------------------------------------
-// test classes
+// tests
 //------------------------------------------------------------------------------
 
+`include "alu_base_test.svh"
 `include "random_test.svh"
 `include "min_max_test.svh"
 

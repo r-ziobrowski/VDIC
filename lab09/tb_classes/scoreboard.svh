@@ -7,9 +7,8 @@ class scoreboard extends uvm_subscriber #(result_transaction);
 		TEST_FAILED
 	} test_result;
 
-	uvm_tlm_analysis_fifo #(random_command) cmd_f;
-
-	protected test_result tr = TEST_PASSED;
+	uvm_tlm_analysis_fifo #(sequence_item) cmd_f;
+	local test_result tr = TEST_PASSED;
 
 	protected bit ERR_DATA = 1'b0;
 	protected bit ERR_OP = 1'b0;
@@ -27,7 +26,7 @@ class scoreboard extends uvm_subscriber #(result_transaction);
 	// Expected result generation
 	//------------------------------------------------------------------------------
 
-	protected function result_transaction get_expected(random_command ALU_in);
+	local function result_transaction get_expected(sequence_item ALU_in);
 		automatic bit [32:0] C_tmp_carry;
 		automatic bit signed [31:0] C_tmp;
 		automatic bit overflow;
@@ -101,7 +100,7 @@ class scoreboard extends uvm_subscriber #(result_transaction);
 
 	function void write(result_transaction t);
 		string data_str;
-		random_command cmd;
+		sequence_item cmd;
 		result_transaction predicted;
 
 		do

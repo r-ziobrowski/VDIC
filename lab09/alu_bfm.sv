@@ -16,7 +16,8 @@ interface alu_bfm;
 	result_monitor result_monitor_h;
 
 	initial begin : clk_gen
-		clk = 0;
+		clk = 1'b0;
+		sin = 1'b1;
 		forever begin : clk_frv
 			#10;
 			clk = ~clk;
@@ -97,7 +98,7 @@ interface alu_bfm;
 		end
 	endtask : read_message
 
-	task send_op(input ALU_input_t ALU_in);
+	task send_op(input ALU_input_t ALU_in, output ALU_output_t ALU_out);
 		ALU_input = ALU_in;
 		case(ALU_in.op_mode)
 			nop_op: begin : case_nop_op
@@ -111,6 +112,7 @@ interface alu_bfm;
 			default: begin : case_default
 				send_message(ALU_in);
 				read_message(ALU_output);
+				ALU_out = ALU_output;
 				rcv_flag = 1'b1;
 			end
 		endcase

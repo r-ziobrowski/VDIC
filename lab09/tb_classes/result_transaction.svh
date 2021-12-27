@@ -6,12 +6,18 @@ class result_transaction extends uvm_transaction;
 	bit is_ERROR;
 	bit [5:0] ERR_FLAGS;
 	bit PARITY;
-
+	
 	function new(string name = "");
 		super.new(name);
 	endfunction : new
 
-	function void do_copy(uvm_object rhs);
+    extern function void do_copy(uvm_object rhs);
+    extern function bit do_compare(uvm_object rhs, uvm_comparer comparer);
+    extern function string convert2string();
+
+endclass : result_transaction
+	
+	function void result_transaction::do_copy(uvm_object rhs);
 		result_transaction copied_transaction_h;
 
 		assert(rhs != null) else
@@ -31,13 +37,13 @@ class result_transaction extends uvm_transaction;
 
 	endfunction : do_copy
 
-	function string convert2string();
+	function string result_transaction::convert2string();
 		string s;
 		s = $sformatf("C: %8h, FLAGS: %h, CRC: %h, is_ERROR: %h, ERR_FLAGS: %6b, PARITY: %h", C, FLAGS, CRC, is_ERROR, ERR_FLAGS, PARITY);
 		return s;
 	endfunction : convert2string
 
-	function bit do_compare(uvm_object rhs, uvm_comparer comparer);
+	function bit result_transaction::do_compare(uvm_object rhs, uvm_comparer comparer);
 		result_transaction compared_result_h;
 		bit same;
 
@@ -56,5 +62,3 @@ class result_transaction extends uvm_transaction;
 			(compared_result_h.PARITY == PARITY);
 		return same;
 	endfunction : do_compare
-
-endclass : result_transaction

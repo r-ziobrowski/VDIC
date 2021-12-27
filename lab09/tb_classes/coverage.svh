@@ -1,14 +1,14 @@
-class coverage extends uvm_subscriber #(random_command);
+class coverage extends uvm_subscriber #(sequence_item);
 
 	`uvm_component_utils(coverage)
 
-	protected bit [31:0] A;
-	protected bit [31:0] B;
-	protected bit [2:0] OP;
-	protected bit [1:0] op_mode;
-	protected bit [2:0] A_nr_of_bytes;
-	protected bit [2:0] B_nr_of_bytes;
-	protected bit ERR_CRC;
+	local bit [31:0] A;
+	local bit [31:0] B;
+	local bit [2:0] OP;
+	local bit [1:0] op_mode;
+	local bit [2:0] A_nr_of_bytes;
+	local bit [2:0] B_nr_of_bytes;
+	local bit ERR_CRC;
 
 	// Covergroup checking the op codes and their sequences
 	covergroup op_cov;
@@ -143,7 +143,7 @@ class coverage extends uvm_subscriber #(random_command);
 		err_cov                 = new();
 	endfunction : new
 
-	function void write(random_command t);
+	function void write(sequence_item t);
 		A               = t.A;
 		B               = t.B;
 		OP              = t.OP;

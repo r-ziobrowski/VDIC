@@ -1,25 +1,25 @@
 class command_monitor extends uvm_component;
 	`uvm_component_utils(command_monitor)
 
-	uvm_analysis_port #(random_command) ap;
+	local virtual alu_bfm bfm;
+	uvm_analysis_port #(sequence_item) ap;
 
 	function new (string name, uvm_component parent);
 		super.new(name,parent);
 	endfunction
 
 	function void build_phase(uvm_phase phase);
-		virtual alu_bfm bfm;
-
 		if(!uvm_config_db #(virtual alu_bfm)::get(null, "*","bfm", bfm))
 			$fatal(1, "Failed to get BFM");
-
-		bfm.command_monitor_h = this;
-		ap                    = new("ap",this);
-
+		ap = new("ap",this);
 	endfunction : build_phase
 
+    function void connect_phase(uvm_phase phase);
+        bfm.command_monitor_h = this;
+    endfunction : connect_phase
+    
 	function void write_to_monitor(ALU_input_t ALU_in);
-		random_command cmd;
+		sequence_item cmd;
 		`uvm_info("COMMAND MONITOR",$sformatf("A: %8h B: %8h OP: %h CRC: %h A_nr_of_bytes: %h B_nr_of_bytes: %h op_mode: %s",
 				ALU_in.A, ALU_in.B, ALU_in.OP, ALU_in.CRC, ALU_in.A_nr_of_bytes, ALU_in.B_nr_of_bytes, ALU_in.op_mode.name()), UVM_HIGH);
 		cmd    = new("cmd");
