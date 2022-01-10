@@ -107,7 +107,6 @@ package alu_pkg;
 	endfunction : CRC_input
 
 `include "sequence_item.svh"
-`include "minmax_sequence_item.svh"
 
 // to be converted into sequence items
 `include "result_transaction.svh"

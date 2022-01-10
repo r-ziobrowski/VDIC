@@ -1,4 +1,4 @@
-class minmax_sequence extends uvm_sequence #(minmax_sequence_item);
+class minmax_sequence extends uvm_sequence #(sequence_item);
     `uvm_object_utils(minmax_sequence)
  
     function new(string name = "minmax_sequence");
@@ -11,7 +11,8 @@ class minmax_sequence extends uvm_sequence #(minmax_sequence_item);
         `uvm_do_with(req, {op_mode == rst_op;} )
         
         repeat (1000) begin
-            `uvm_do(req);
+        	`uvm_do_with(req, {A dist {32'h0 := 1, 32'hFFFF_FFFF := 1};
+	        				   B dist {32'h0 := 1, 32'hFFFF_FFFF := 1};})
 //            req.print();
         end
     endtask : body
