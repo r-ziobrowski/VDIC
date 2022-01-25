@@ -106,7 +106,7 @@ interface rz_alu_if(clock);
                 ALU_output.PARITY = data_tmp[0];
                 break;
             end else begin
-                ALU_output.C[i*8-1 -: 8] = data_tmp;
+                ALU_output.C[i*8-1 -: 8] = data_tmp;//8'hFF;
             end
         end
         if (!ALU_output.is_ERROR) begin

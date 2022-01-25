@@ -113,11 +113,11 @@ class rz_alu_monitor extends uvm_monitor;
         data_str  = {"Actual \n" , m_collected_item.sprint(),
             "/Predicted \n",predicted_item.sprint()};
 
-        if (!predicted_item.compare(m_collected_item)) begin
-            `uvm_error("SELF CHECKER", {"FAIL: ",data_str})
+        assert (predicted_item.compare(m_collected_item)) begin
+            `uvm_info ("SELF CHECKER", {"PASS: ", data_str}, UVM_HIGH)
         end
         else
-            `uvm_info ("SELF CHECKER", {"PASS: ", data_str}, UVM_HIGH)
+            `uvm_error("SELF CHECKER", {"FAIL: ",data_str})
     endfunction : perform_item_checks
 
     virtual protected function void reset_monitor();
